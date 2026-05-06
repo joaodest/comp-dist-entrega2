@@ -3,7 +3,7 @@
 Monorepo do backend distribuido do Voxel Royale. A estrutura atual separa os tres servicos planejados para a Entrega 1:
 
 - `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para o Game.
-- `services/game`: servico gRPC autoritativo minimo para o fluxo de partida.
+- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking.
 - `services/lobby`: boilerplate containerizado para a futura gestao de salas.
 
 ## Estrutura
@@ -52,10 +52,10 @@ Com a stack ativa:
 curl http://localhost:8080/healthz
 curl -X POST http://localhost:8080/v1/match/stream `
   -H "Content-Type: application/json" `
-  -d "{\"playerId\":\"player-1\",\"moveX\":1,\"moveY\":2,\"isAttacking\":false}"
+  -d "{\"playerId\":\"player-1\",\"moveX\":1,\"moveY\":2,\"inputSequence\":1,\"openChest\":false,\"isAttacking\":false}"
 ```
 
-Resposta esperada do fluxo HTTP Gateway -> gRPC Game:
+Trecho esperado do fluxo HTTP Gateway -> gRPC Game:
 
 ```json
 {
@@ -65,9 +65,34 @@ Resposta esperada do fluxo HTTP Gateway -> gRPC Game:
       "playerId": "player-1",
       "x": 1,
       "y": 2,
-      "isAlive": true
+      "isAlive": true,
+      "health": 100,
+      "weapon": "pistol"
     }
-  ]
+  ],
+  "chests": [
+    {
+      "chestId": "chest-01",
+      "x": 3,
+      "y": 0,
+      "weapon": "rifle"
+    }
+  ],
+  "safeZone": {
+    "centerX": 0,
+    "centerY": 0,
+    "radius": 44.866665,
+    "phase": "0"
+  },
+  "ranking": [
+    {
+      "playerId": "player-1",
+      "place": 1,
+      "isAlive": true,
+      "health": 100
+    }
+  ],
+  "remainingTicks": "299"
 }
 ```
 
@@ -79,6 +104,7 @@ Resposta esperada do fluxo HTTP Gateway -> gRPC Game:
 - O Gateway nao usa mais `localhost` em container; Compose injeta `GAME_GRPC_ADDR=game:50051`.
 - Lobby agora existe como servico separado e containerizado, ainda em boilerplate.
 - Cada servico tem Dockerfile proprio e healthcheck.
+- O Game agora mantem estado em memoria para movimentacao validada, abertura de baus, tres armas, dano, eliminacao, safe zone e ranking.
 
 ## Desvios em Relacao ao Plano Original
 

@@ -20,11 +20,21 @@ message PlayerInput {
   float move_x = 2;
   float move_y = 3;
   bool is_attacking = 4;
+  int64 input_sequence = 5;
+  bool open_chest = 6;
+  string target_player_id = 7;
+  float aim_x = 8;
+  float aim_y = 9;
 }
 
 message GameState {
   int64 tick = 1;
   repeated PlayerSnapshot players = 2;
+  repeated ChestSnapshot chests = 3;
+  SafeZoneSnapshot safe_zone = 4;
+  repeated RankingEntry ranking = 5;
+  bool match_ended = 6;
+  int64 remaining_ticks = 7;
 }
 
 message PlayerSnapshot {
@@ -32,4 +42,36 @@ message PlayerSnapshot {
   float x = 2;
   float y = 3;
   bool is_alive = 4;
+  int32 health = 5;
+  string weapon = 6;
+  int32 eliminations = 7;
+  int32 damage_dealt = 8;
+  int32 damage_taken = 9;
+  int64 survived_ticks = 10;
+}
+
+message ChestSnapshot {
+  string chest_id = 1;
+  float x = 2;
+  float y = 3;
+  bool is_opened = 4;
+  string weapon = 5;
+  string opened_by_player_id = 6;
+}
+
+message SafeZoneSnapshot {
+  float center_x = 1;
+  float center_y = 2;
+  float radius = 3;
+  int64 phase = 4;
+}
+
+message RankingEntry {
+  string player_id = 1;
+  int32 place = 2;
+  bool is_alive = 3;
+  int32 health = 4;
+  int32 eliminations = 5;
+  int32 damage_dealt = 6;
+  int64 survived_ticks = 7;
 }

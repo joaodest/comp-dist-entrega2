@@ -30,14 +30,14 @@ The approved plan asked to:
 
 - Gateway exposes HTTP on `:8080`.
 - Gateway proxies `POST /v1/match/stream` to Game through gRPC.
-- Game validates `player_id` and returns a minimal authoritative snapshot.
+- Game validates `player_id` and computes an in-memory authoritative gameplay snapshot with movement, chest opening, weapon pickup, damage, elimination, safe zone and ranking.
 - Lobby exposes a separate gRPC service and healthcheck, but remains intentionally boilerplate.
 
 ## Deviations
 
 - The original planning docs expected a room flow using Lobby. This was not implemented because the request explicitly scoped Lobby to boilerplate.
 - `gen/` is used for generated code instead of `internal/contracts/`, matching the restored code and keeping imports stable.
-- The implemented gameplay-facing RPC remains `StreamMatch`, not `StartMatch`.
+- The implemented gameplay-facing RPC remains `StreamMatch`, not `StartMatch`; it now carries gameplay input and snapshot fields beyond the initial skeleton.
 
 ## Remaining Work
 
@@ -45,4 +45,5 @@ The approved plan asked to:
 - Connect Lobby to Game for match start.
 - Add request correlation/logging across services.
 - Add WebSocket gameplay transport.
+- Tune gameplay balance and replace the single in-memory match with room-scoped match state.
 - Add observability stack and 50-player load runner.
