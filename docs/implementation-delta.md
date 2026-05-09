@@ -30,8 +30,9 @@ The approved plan asked to:
 
 - Gateway exposes HTTP on `:8080`.
 - Gateway proxies `POST /v1/match/stream` to Game through gRPC.
+- Gateway proxies Lobby room endpoints (`/v1/rooms/*`) to Lobby through gRPC via grpc-gateway.
 - Game validates `player_id` and computes an in-memory authoritative gameplay snapshot with movement, chest opening, weapon pickup, damage, elimination, safe zone and ranking.
-- Lobby exposes a separate gRPC service and healthcheck, but remains intentionally boilerplate.
+- Lobby manages room lifecycle with in-memory state: CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom. Includes owner validation, capacity limits, ownership transfer and room closure.
 
 ## Deviations
 
@@ -41,9 +42,8 @@ The approved plan asked to:
 
 ## Remaining Work
 
-- Implement real Lobby state and Gateway room endpoints.
-- Connect Lobby to Game for match start.
-- Add request correlation/logging across services.
+- Connect Lobby StartRoom to Game service for match start.
+- Add request correlation/logging across services (slog with request_id, room_id, player_id).
 - Add WebSocket gameplay transport.
 - Tune gameplay balance and replace the single in-memory match with room-scoped match state.
 - Add observability stack and 50-player load runner.
