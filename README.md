@@ -25,18 +25,69 @@ Monorepo do backend distribuido do Voxel Royale. A estrutura atual separa os tre
     └── lobby/
 ```
 
-## Requisitos
+## Configuração do Ambiente
 
-- Go 1.25.0 ou `GOTOOLCHAIN=auto`.
-- Docker 27+ com Docker Compose.
-- `protoc` e plugins Go apenas se for regenerar `gen/`.
+### Pré-requisitos
 
-## Comandos
+#### Instalação do Docker e WSL2
+- Baixe e instale o Docker Desktop para Windows: [docker.com](https://www.docker.com/products/docker-desktop/)
+- Certifique-se de que o WSL2 está habilitado (Docker Desktop instala automaticamente, mas verifique com `wsl --list --verbose`)
 
-```powershell
-go test ./...
+#### Instalação do Go (Golang)
+- Baixe a versão 1.25.0 ou superior do Go: [golang.org](https://golang.org/dl/)
+- Instale e adicione ao PATH do sistema
+- Verifique com `go version`
+
+#### Download do Compilador Protoc (Protocol Buffers)
+- Baixe o release mais recente do protoc para Windows: [github.com/protocolbuffers/protobuf/releases](https://github.com/protocolbuffers/protobuf/releases)
+- Descompacte o arquivo ZIP
+- Mova o executável `protoc.exe` da pasta `bin` para uma pasta no PATH do sistema (ex: `C:\Windows\System32` ou adicione uma pasta personalizada ao PATH)
+
+### Dependências de Terceiros (Protos)
+
+Crie a pasta `third_party` e clone o repositório de APIs do Google:
+
+```bash
+mkdir third_party
+cd third_party
+git clone --depth 1 https://github.com/googleapis/googleapis
+```
+
+### Plugins do Go para Protobuf
+
+Instale os geradores de código via terminal:
+
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+```
+
+## Como Executar
+
+### Executando o Projeto com Docker
+
+Valide a configuração e suba os containers:
+
+```bash
 docker compose -f deployments/docker-compose.yml config
 docker compose -f deployments/docker-compose.yml up --build
+```
+
+### Testando a API
+
+O Gateway recebe requisições HTTP na porta 8080 e converte para gRPC internamente.
+
+#### Health Check
+```bash
+curl http://localhost:8080/healthz
+```
+
+#### Enviar Movimento (Stream)
+```bash
+curl -X POST http://localhost:8080/v1/match/stream \
+  -H "Content-Type: application/json" \
+  -d "{\"playerId\":\"player-1\",\"moveX\":1,\"moveY\":2,\"inputSequence\":1,\"openChest\":false,\"isAttacking\":false}"
 ```
 
 ## Documentacao
