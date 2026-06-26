@@ -30,11 +30,11 @@
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Create Go module, Makefile, protobuf contracts and generated gRPC code.
-- [ ] 01-02-PLAN.md — Implement Lobby and Game gRPC services with in-memory state and correlated logs.
-- [ ] 01-03-PLAN.md — Implement Gateway HTTP JSON web services that call Lobby through gRPC.
-- [ ] 01-04-PLAN.md — Package Gateway, Lobby and Game in Docker Compose with README demo commands.
-- [ ] 01-05-PLAN.md — Write architecture docs, message docs, role placeholders and Entrega 1 report draft.
+- [x] 01-01-PLAN.md — Create Go module, Makefile, protobuf contracts and generated gRPC code.
+- [x] 01-02-PLAN.md — Implement Lobby and Game gRPC services with in-memory state. (correlated logs still pending)
+- [x] 01-03-PLAN.md — Implement Gateway HTTP JSON web services that call Lobby through gRPC (grpc-gateway).
+- [x] 01-04-PLAN.md — Package Gateway, Lobby and Game in Docker Compose with README demo commands.
+- [ ] 01-05-PLAN.md — Write architecture docs, message docs, role placeholders and Entrega 1 report draft. (partial: docs/architecture.md done; messages.md, roles.md and report draft pending)
 
 ### Phase 2: Team Development System
 **Goal**: Nine students can work in parallel without breaking contracts or architecture consistency.  
@@ -121,7 +121,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Entrega 1 Distributed Skeleton | 0/0 | Not started | - |
+| 1. Entrega 1 Distributed Skeleton | 4/5 | In progress (code done, report pending) | - |
 | 2. Team Development System | 0/0 | Not started | - |
 | 3. QR Lobby and Match Start | 0/0 | Not started | - |
 | 4. Realtime Network Pipeline | 0/0 | Not started | - |
@@ -135,4 +135,5 @@ Plans:
 All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements.
 
 ---
-*Roadmap created: 2026-04-24 after initialization*
+*Roadmap created: 2026-04-24 after initialization*  
+*Roadmap updated: 2026-06-26 to reflect Phase 1 implementation (plans 01-01..01-04 done, 01-05 partial)*
