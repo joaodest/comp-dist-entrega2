@@ -40,6 +40,13 @@ service LobbyService {
       body: "*"
     };
   }
+
+  rpc SetReady(SetReadyRequest) returns (RoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/ready"
+      body: "*"
+    };
+  }
 }
 
 enum RoomStatus {
@@ -52,6 +59,7 @@ enum RoomStatus {
 message Player {
   string player_id = 1;
   string player_name = 2;
+  bool ready = 3;
 }
 
 message CreateRoomRequest {
@@ -85,4 +93,10 @@ message RoomResponse {
   repeated Player players = 4;
   int32 max_players = 5;
   string join_url = 6;
+}
+
+message SetReadyRequest {
+  string room_id = 1;
+  string player_id = 2;
+  bool ready = 3;
 }

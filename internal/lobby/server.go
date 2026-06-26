@@ -202,6 +202,83 @@ func (s *Server) LeaveRoom(_ context.Context, req *lobbyv1.LeaveRoomRequest) (*l
 	resp := roomToResponse(r)
 	return resp, nil
 }
+func (r *room) allReady() bool {
+	if len(r.players) == 0 {
+		return false
+	}
+
+	for _, p := range r.players {
+		if !p.Ready {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Server) SetReady(_ context.Context, req *lobbyv1.SetReadyRequest) (*lobbyv1.RoomResponse, error) {
+	roomID, err := requireTrimmed(req.GetRoomId(), "room_id")
+	if err != nil {
+		return nil, err
+	}
+
+	playerID, err := requireTrimmed(req.GetPlayerId(), "player_id")
+	if err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	r, ok := s.rooms[roomID]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "room %s not found", roomID)
+	}
+
+	if r.status != lobbyv1.RoomStatus_ROOM_STATUS_WAITING {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"room %s is not in waiting state (status: %v)",
+			roomID,
+			r.status,
+		)
+	}
+
+	if !r.playerSet[playerID] {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"player %s not found in room %s",
+			playerID,
+			roomID,
+		)
+	}
+
+	var player *lobbyv1.Player
+
+	for _, p := range r.players {
+		if p.PlayerId == playerID {
+			player = p
+			break
+		}
+	}
+
+	if player == nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"player %s not found in room %s",
+			playerID,
+			roomID,
+		)
+	}
+
+	player.Ready = req.Ready
+
+	if req.Ready && r.allReady() {
+		r.status = lobbyv1.RoomStatus_ROOM_STATUS_STARTED
+	}
+
+	return roomToResponse(r), nil
+}
 
 func roomToResponse(r *room) *lobbyv1.RoomResponse {
 	players := make([]*lobbyv1.Player, len(r.players))
@@ -209,6 +286,7 @@ func roomToResponse(r *room) *lobbyv1.RoomResponse {
 		players[i] = &lobbyv1.Player{
 			PlayerId:   p.PlayerId,
 			PlayerName: p.PlayerName,
+			Ready:      p.Ready,
 		}
 	}
 

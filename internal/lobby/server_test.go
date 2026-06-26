@@ -447,6 +447,125 @@ func TestResponseDoesNotLeakInternalState(t *testing.T) {
 	}
 }
 
+func TestSetReady(t *testing.T) {
+	srv := NewServer()
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	resp, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: created.OwnerId,
+		Ready:    true,
+	})
+	if err != nil {
+		t.Fatalf("SetReady failed: %v", err)
+	}
+
+	if !resp.Players[0].Ready {
+		t.Fatal("expected player to be ready")
+	}
+}
+
+func TestSetReadyPlayerNotFound(t *testing.T) {
+	srv := NewServer()
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	_, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: "unknown-player",
+		Ready:    true,
+	})
+
+	assertCode(t, err, codes.NotFound)
+}
+
+func TestSetReadyRoomAlreadyStarted(t *testing.T) {
+	srv := NewServer()
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	mustStartRoom(t, srv, ctx, created.RoomId, created.OwnerId)
+
+	_, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: created.OwnerId,
+		Ready:    true,
+	})
+
+	assertCode(t, err, codes.FailedPrecondition)
+}
+
+func TestSetReadyAutoStartsRoom(t *testing.T) {
+	srv := NewServer()
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	joined, err := srv.JoinRoom(ctx, &lobbyv1.JoinRoomRequest{
+		RoomId:     created.RoomId,
+		PlayerName: "Bruno",
+	})
+	if err != nil {
+		t.Fatalf("JoinRoom failed: %v", err)
+	}
+
+	brunoID := joined.Players[1].PlayerId
+
+	_, err = srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: created.OwnerId,
+		Ready:    true,
+	})
+	if err != nil {
+		t.Fatalf("SetReady owner failed: %v", err)
+	}
+
+	resp, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: brunoID,
+		Ready:    true,
+	})
+	if err != nil {
+		t.Fatalf("SetReady bruno failed: %v", err)
+	}
+
+	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_STARTED {
+		t.Fatalf("status = %v, want STARTED", resp.Status)
+	}
+}
+
+func TestSetReadyDoesNotStartIfNotEveryoneReady(t *testing.T) {
+	srv := NewServer()
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	_, err := srv.JoinRoom(ctx, &lobbyv1.JoinRoomRequest{
+		RoomId:     created.RoomId,
+		PlayerName: "Bruno",
+	})
+	if err != nil {
+		t.Fatalf("JoinRoom failed: %v", err)
+	}
+
+	resp, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{
+		RoomId:   created.RoomId,
+		PlayerId: created.OwnerId,
+		Ready:    true,
+	})
+	if err != nil {
+		t.Fatalf("SetReady failed: %v", err)
+	}
+
+	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_WAITING {
+		t.Fatalf("status = %v, want WAITING", resp.Status)
+	}
+}
+
 func assertCode(t *testing.T, err error, expected codes.Code) {
 	t.Helper()
 	if err == nil {
