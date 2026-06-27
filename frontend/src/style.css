@@ -1,0 +1,208 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #5e9b46;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app,
+#game {
+  position: fixed;
+  inset: 0;
+}
+
+#game canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* HUD (sobreposicao, nao bloqueia o jogo) */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  color: #fff;
+}
+
+.hud__top {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hud__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  background: rgba(8, 14, 10, 0.42);
+  padding: 7px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #73d4ff;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+.badge--live {
+  background: #2fbf5e;
+  color: #042312;
+}
+
+.badge--off {
+  background: #d6a13a;
+  color: #2a1c02;
+}
+
+.hud__stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: rgba(8, 14, 10, 0.42);
+  padding: 7px 11px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.stat b {
+  font-weight: 800;
+}
+
+.hud__me {
+  position: absolute;
+  top: 58px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.chip {
+  background: rgba(8, 14, 10, 0.42);
+  padding: 6px 11px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.chip b {
+  font-weight: 800;
+  color: #ffe08a;
+}
+
+.hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(8, 14, 10, 0.4);
+  padding: 6px 12px;
+  border-radius: 10px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Controles touch/mouse */
+#controls {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.joy {
+  position: absolute;
+  left: 26px;
+  bottom: 26px;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  background: rgba(8, 14, 10, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+
+.joy__thumb {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(8, 14, 10, 0.5);
+  will-change: transform;
+}
+
+.btns {
+  position: absolute;
+  right: 26px;
+  bottom: 30px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.btn {
+  pointer-events: auto;
+  touch-action: none;
+  border: 2px solid rgba(8, 14, 10, 0.55);
+  background: rgba(255, 255, 255, 0.9);
+  color: #14140f;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn--fire {
+  background: #ff5d6c;
+  color: #2a060a;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+}
