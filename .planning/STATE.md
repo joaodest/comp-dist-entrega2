@@ -5,7 +5,7 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real no qual 50 jogadores participam de uma partida battle royale voxel com backend Go autoritativo e comunicacao entre servicos via gRPC.  
-**Current focus:** Phase 1 - Entrega 1 Distributed Skeleton (code + docs/report draft complete; pending real student names)
+**Current focus:** Entrega 2 — cliente web Phaser 2D (estilo .io) jogável ligado ao Gateway. (Entrega 1 fechada; faltam só os nomes reais dos alunos.)
 
 ## Current Position
 
@@ -39,6 +39,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Lobby supports CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom and SetReady (player ready state, auto-starts when all ready). PR #6 merged 2026-06-26.
 - Entrega 1 docs criados refletindo os contratos REAIS (não os nomes supostos no plano 01-05): `docs/messages.md` documenta `match.proto`/`StreamMatch` (não `game.proto`/`StartMatch`); `docs/roles.md` define 3 squads para 9 alunos.
 - Relatório SBC é um rascunho em classe `article` (portátil) que compila com MiKTeX/pdflatex via `docs/report/build.ps1`; trocar pelo `sbc-template` oficial na submissão final. PDF atual tem exatamente 4 páginas (no limite).
+- Cliente web implementado em `frontend/` (Phaser 3 + TypeScript + Vite), estilo .io top-down (mapa grama/rio/árvores/pedras, jogador controlável, render do `GameState`). MVP adiantado em relação ao roadmap — valida a direção de arte e o caminho Navegador→Gateway→Game. Modo AO VIVO (`POST /v1/match/stream`) com fallback OFFLINE (mock).
+- `playerId` do cliente é único por sessão (evita colisão de identidade e input `stale`, já que o servidor guarda o último `inputSequence` por jogador).
+- Backend: `GameService.StreamMatch` agora **auto-reinicia** o match quando ele termina. Antes, o match global encerrado (tick ≥ 300) fazia o servidor ignorar todo input e travar para todos.
 
 ### Todos
 
@@ -49,6 +52,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Connect `Lobby.StartRoom` to the Game service for match start.
 - Add request correlation/logging across services (request_id, room_id, player_id).
 - Plan Phase 2 from the roadmap once Entrega 1 report is closed.
+- **[ABERTO] Refactor de tempo real (Fase 4):** o `StreamMatch` avança 1 tick por request (modelo unário), então a partida atinge `maxMatchTicks` (300) em ~27s e auto-reinicia (zona/mundo resetam). Trocar para o servidor avançar ticks no **próprio relógio** + transporte **WebSocket** (snapshots em tempo real, desacoplados do request). Fix temporário já aplicado: auto-restart do match encerrado para não travar o input.
 
 ### Blockers
 
@@ -71,4 +75,4 @@ Antes da Fase 2, vale reconciliar o ROADMAP: o ready-state do Lobby (LOBB-03, es
 implementado na Fase 1.
 
 ---
-*State updated: 2026-06-27 after completing plan 01-05 (Entrega 1 docs + SBC report draft)*
+*State updated: 2026-06-27 — cliente Phaser .io (MVP jogável, AO VIVO/OFFLINE) + fix de auto-restart do match. TODO aberto: refactor de tempo real (relógio do servidor + WebSocket, Fase 4).*

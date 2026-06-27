@@ -95,6 +95,28 @@ curl -X POST http://localhost:8080/v1/match/stream \
 - [Architecture update](docs/architecture.md): arquitetura implementada em relacao ao plano original.
 - [Implementation delta](docs/implementation-delta.md): checklist do que foi feito, desvios e gaps restantes.
 
+## Frontend / Cliente (Phaser 2D)
+
+Cliente web do jogo em [`frontend/`](frontend/) (Phaser 3 + TypeScript + Vite), estilo
+top-down ".io" (grama, rio, árvores, pedras, jogador controlável, zona segura e baús
+renderizados a partir do `GameState`).
+
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+```
+
+- **AO VIVO:** fala com o Gateway real (`POST /v1/match/stream`, via proxy do Vite para `:8080`).
+  Suba o backend: `go run ./services/game` e `go run ./services/gateway`.
+- **OFFLINE (mock):** se o Gateway não responder, cai num simulador local e continua jogável.
+- Controles: WASD/setas ou joystick para mover; espaço/ATIRAR; E/BAÚ. Detalhes em
+  [`frontend/README.md`](frontend/README.md).
+
+> **Limitação atual (TODO):** o `StreamMatch` avança 1 tick por request, então a partida
+> atinge o limite (300 ticks, ~27s) e **auto-reinicia**. O refactor de tempo real (relógio do
+> servidor + WebSocket) está registrado como TODO aberto (Fase 4).
+
 ## Smoke Test
 
 Com a stack ativa:

@@ -129,7 +129,10 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.match == nil {
+	// Reinicia automaticamente quando a partida anterior terminou (limite de
+	// ticks ou ultimo sobrevivente). Sem isso, o match global fica "encerrado"
+	// e o servidor passa a ignorar todo input -> trava para todos.
+	if s.match == nil || s.match.matchEnded {
 		s.match = newMatchState()
 	}
 
