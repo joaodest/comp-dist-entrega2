@@ -73,7 +73,7 @@ Prometheus / Jaeger / Grafana
 
 | Component       | Responsibility                                                                | Communicates With                |
 | --------------- | ----------------------------------------------------------------------------- | -------------------------------- |
-| Frontend client | 3D render, touch controls, local prediction/interpolation, QR join flow.      | Gateway HTTP/WebSocket           |
+| Frontend client | 2D render, touch controls, local prediction/interpolation, QR join flow.      | Gateway HTTP/WebSocket           |
 | Gateway service | Public entrypoint, WebSocket sessions, request validation, fanout to clients. | Lobby and Game via gRPC          |
 | Lobby service   | Room lifecycle, player registration, ready state, match start request.        | Gateway and Game via gRPC        |
 | Game service    | Authoritative tick, spawn, collision, chests, weapons, safe zone, ranking.    | Gateway and Lobby via gRPC       |

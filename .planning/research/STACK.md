@@ -19,8 +19,8 @@
 
 | Technology | Version Policy | Purpose | Why |
 |------------|----------------|---------|-----|
-| TypeScript | Pin in package.json | Client app | Safer contracts for network payloads and 3D game code. |
-| Babylon.js | Pin in package.json | 3D voxel rendering | Good browser 3D engine with mobile-friendly APIs and assets ecosystem. |
+| TypeScript | Pin in package.json | Client app | Safer contracts for network payloads and 2D game code. |
+| Phaser | Pin in package.json | 2D rendering | Mature browser 2D game engine with mobile-friendly input; simpler than a 3D engine for the academic scope and matches the already-2D backend (x/y). |
 | Vite | Pin in package.json | Frontend dev/build | Fast student-friendly workflow and simple static deployment. |
 
 ### Observability and Testing
@@ -46,7 +46,7 @@
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
 | Realtime transport | WebSocket | WebRTC | WebRTC adds NAT/signaling complexity that does not help Entrega 1. |
-| Client 3D engine | Babylon.js | Three.js | Three.js is excellent, but Babylon.js gives more game-oriented primitives for this team. |
+| Client game engine | Phaser (2D) | Babylon.js / Three.js (3D) | 3D engines add modeling/rendering complexity; Phaser 2D matches the already-2D backend (x/y) and is faster for the team to learn. |
 | Backend language | Go | Node.js | Go better demonstrates concurrency and gRPC in the discipline context. |
 | Orchestration | Docker Compose | Kubernetes | Kubernetes is unnecessary for the first two deliveries and would dilute focus. |
 

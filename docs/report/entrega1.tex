@@ -1,0 +1,162 @@
+% ==========================================================================
+%  Voxel Royale Distribuido - Rascunho do relatorio da Entrega 1
+% --------------------------------------------------------------------------
+%  Para a SUBMISSAO FINAL, troque a classe abaixo pelo template oficial da SBC
+%  (sbc-template): baixe "sbc-template.sty" do modelo de artigos da SBC
+%  (https://www.sbc.org.br) e use \documentclass[12pt]{article} +
+%  \usepackage{sbc-template}. Este rascunho usa apenas a classe article para
+%  compilar de forma portatil em qualquer instalacao LaTeX, mantendo a mesma
+%  estrutura de secoes exigida pela Entrega 1 (problema, arquitetura, requisitos
+%  implementados, detalhes de implementacao, desafios e papeis dos alunos).
+% ==========================================================================
+\documentclass[12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.8cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{Voxel Royale Distribuído:\\ um esqueleto de \textit{battle royale} em tempo real\\ com gRPC e \textit{web services}}}
+
+\author{
+Grupo de Computação Distribuída --- PUC Minas\\
+\small Aluno 1 \texttt{PLACEHOLDER}, Aluno 2 \texttt{PLACEHOLDER}, Aluno 3 \texttt{PLACEHOLDER},\\
+\small Aluno 4 \texttt{PLACEHOLDER}, Aluno 5 \texttt{PLACEHOLDER}, Aluno 6 \texttt{PLACEHOLDER},\\
+\small Aluno 7 \texttt{PLACEHOLDER}, Aluno 8 \texttt{PLACEHOLDER}, Aluno 9 \texttt{PLACEHOLDER}
+}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent\textbf{Resumo.} Este relatório descreve a primeira entrega do Voxel Royale
+Distribuído, um mini \textit{battle royale} 2D projetado para rodar no navegador do
+celular. O foco da Entrega 1 é demonstrar uma arquitetura distribuída clara que satisfaça,
+obrigatoriamente, dois requisitos do enunciado: comunicação interna via \textbf{gRPC/RPC} e
+exposição de \textbf{\textit{web services}} HTTP. Apresentamos a divisão em três
+microsserviços Go --- Gateway, Lobby e Game ---, os contratos \textit{Protocol Buffers}, o
+fluxo de mensagens e o empacotamento reprodutível em Docker Compose.
+
+\vspace{0.6em}
+\noindent\textbf{Abstract.} This report describes the first delivery of Voxel Royale
+Distribuído, a mobile-first 2D battle royale. The goal of this delivery is to
+demonstrate a clear distributed architecture satisfying two mandatory course requirements:
+internal \textbf{gRPC/RPC} communication and HTTP \textbf{web services}. We present three Go
+microservices (Gateway, Lobby and Game), the Protocol Buffers contracts, the message flow and
+a reproducible Docker Compose packaging.
+\end{abstract}
+
+\section{Problema}
+
+O objetivo do trabalho é construir, de forma jogável e mensurável, um sistema distribuído em
+tempo real no qual até 50 jogadores participam de uma partida \textit{battle royale} voxel. Os
+jogadores entram por QR Code, informam apenas um nome (sem conta ou autenticação) e disputam
+partidas rápidas de até cinco minutos. O desafio central, do ponto de vista de Computação
+Distribuída, não é o jogo em si, mas evidenciar conceitos da disciplina: comunicação entre
+processos, contratos tipados, concorrência, um servidor autoritativo sobre o estado e um
+caminho claro para observabilidade, tolerância a falhas e teste de carga nas próximas fases.
+
+A Entrega 1 exige a implementação de pelo menos dois requisitos do enunciado. O grupo escolheu
+\textbf{gRPC/RPC} para a comunicação interna entre serviços e \textbf{\textit{web services}}
+HTTP para a operação e a entrada de jogadores. Esta entrega entrega um \textit{esqueleto
+distribuído} executável que prova esses dois requisitos ponta a ponta.
+
+\section{Arquitetura}
+
+O sistema é um monorepo Go dividido em três microsserviços que se comunicam por gRPC e são
+orquestrados por Docker Compose. O \textbf{Gateway} é a borda HTTP pública; o \textbf{Lobby}
+gerencia o ciclo de vida das salas; e o \textbf{Game} é o servidor autoritativo da partida.
+
+\begin{verbatim}
+  Navegador / curl
+        | HTTP JSON
+        v
+    Gateway :8080  --- gRPC --->  Lobby :50052   (salas)
+        |
+        +--------- gRPC --------> Game  :50051   (partida autoritativa)
+\end{verbatim}
+
+O Gateway traduz requisições HTTP/JSON em chamadas gRPC usando \textit{grpc-gateway}: as
+anotações \texttt{google.api.http} nos arquivos \texttt{.proto} definem cada rota REST a partir
+de um método RPC. Assim, o mesmo contrato \textit{Protocol Buffers} serve tanto para a
+comunicação interna tipada (gRPC) quanto para a API pública (web service), evitando divergência
+entre as duas interfaces. Os serviços se descobrem por DNS interno do Compose
+(\texttt{game:50051}, \texttt{lobby:50052}) e cada um expõe um \texttt{/healthz} usado pelos
+\textit{healthchecks}.
+
+\section{Requisitos implementados}
+
+\textbf{gRPC/RPC (requisito 1).} Os contratos vivem em \texttt{proto/lobby/v1/lobby.proto} e
+\texttt{proto/match/v1/match.proto}, dos quais geramos o código Go com \texttt{protoc}. O Lobby
+implementa o serviço \texttt{LobbyService} com seis RPCs: \texttt{CreateRoom}, \texttt{JoinRoom},
+\texttt{GetRoom}, \texttt{StartRoom}, \texttt{LeaveRoom} e \texttt{SetReady}. O Game implementa
+\texttt{GameService.StreamMatch}, que recebe o \textit{input} do jogador e devolve um
+\textit{snapshot} autoritativo da partida (posições, vida, armas, baús, zona segura e ranking).
+
+\textbf{Web services HTTP (requisito 2).} O Gateway publica, na porta 8080, web services REST/JSON
+mapeados diretamente dos RPCs: \texttt{POST /v1/rooms}, \texttt{POST /v1/rooms/\{id\}/join},
+\texttt{GET /v1/rooms/\{id\}}, \texttt{POST /v1/rooms/\{id\}/start},
+\texttt{POST /v1/rooms/\{id\}/leave}, \texttt{POST /v1/rooms/\{id\}/ready} e
+\texttt{POST /v1/match/stream}, além de \texttt{GET /healthz}. A referência completa de mensagens
+está em \texttt{docs/messages.md}.
+
+\section{Detalhes de implementação}
+
+O backend usa Go 1.25 e \texttt{google.golang.org/grpc}. Cada serviço é um processo
+independente em \texttt{services/} com lógica isolada em \texttt{internal/}, o que permite testes
+unitários por serviço (\texttt{go test ./...} cobre Gateway, Lobby e Game). O estado é mantido
+em memória: o Lobby guarda salas e jogadores com controle de concorrência por \textit{mutex}; o
+Game mantém uma partida autoritativa que valida o \textit{input}, descarta entradas repetidas por
+\texttt{input\_sequence}, avança um \textit{tick} e recalcula movimento (limitado), abertura de
+baús, dano por arma, zona segura que encolhe e ranking ordenado.
+
+O empacotamento usa um \texttt{Dockerfile} por serviço e um
+\texttt{deployments/docker-compose.yml} no qual o Gateway só sobe após Game e Lobby ficarem
+saudáveis (\texttt{depends\_on} com \texttt{condition: service\_healthy}). Isso torna a demonstração
+reprodutível em qualquer máquina com Docker, com um caminho direto para implantação em VPS.
+
+\section{Desafios}
+
+O principal desafio foi consolidar uma base que havia sido revertida do \texttt{master} e
+estava espalhada em \textit{branches}, transformando-a em um monorepo coerente com fronteiras
+claras entre contrato, serviço e infraestrutura. Decidir que o código gerado ficaria em
+\texttt{gen/} e os contratos versionados em \texttt{proto/<svc>/v1} estabilizou os \textit{imports}.
+Outro ponto foi a coordenação do grupo de nove pessoas: definimos \textit{ownership} por squad e
+um processo de mudança de contrato para evitar quebras. Ficam para as próximas fases conectar
+\texttt{Lobby.StartRoom} ao Game, adicionar o transporte WebSocket em tempo real, logs
+correlacionados e a prova de carga com 50 jogadores.
+
+\section{Papéis dos alunos}
+
+O grupo se organiza em três squads por fatia funcional (detalhe em \texttt{docs/roles.md}):
+\begin{itemize}[noitemsep]
+  \item \textbf{Squad A} --- fluxo canônico de início de partida (Lobby + Game).
+  \item \textbf{Squad B} --- contrato e esqueleto distribuído (Gateway, \texttt{.proto}, geração).
+  \item \textbf{Squad C} --- demo, empacotamento e relatório (Docker Compose, smoke test, SBC).
+\end{itemize}
+Cada squad é responsável por escrever a seção do relatório correspondente ao que implementou.
+Os nomes dos nove alunos e os \textit{owners} de cada squad estão marcados como
+\texttt{PLACEHOLDER} e devem ser preenchidos antes da submissão.
+
+\section{Conclusão}
+
+A Entrega 1 cumpre seu objetivo: um esqueleto distribuído executável que demonstra, de forma
+verificável, comunicação interna por gRPC e \textit{web services} HTTP, com documentação de
+arquitetura e mensagens. A base está pronta para evoluir para o pipeline em tempo real, a
+jogabilidade completa e a observabilidade exigida na Entrega 2.
+
+\begin{thebibliography}{9}
+\bibitem{grpc} gRPC Authors. \textit{gRPC: A high performance, open source universal RPC framework}. \url{https://grpc.io}.
+\bibitem{grpcgateway} gRPC-Gateway Authors. \textit{grpc-gateway: gRPC to JSON proxy generator}. \url{https://github.com/grpc-ecosystem/grpc-gateway}.
+\bibitem{protobuf} Google. \textit{Protocol Buffers}. \url{https://protobuf.dev}.
+\end{thebibliography}
+
+\end{document}

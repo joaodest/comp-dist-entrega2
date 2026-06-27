@@ -10,7 +10,7 @@
 - [ ] **Phase 2: Team Development System** - Establish by-design architecture rules, contracts, ownership and contribution workflow for 9 students.
 - [ ] **Phase 3: QR Lobby and Match Start** - Let players create, join and start rooms through QR Code and web services.
 - [ ] **Phase 4: Realtime Network Pipeline** - Connect browser clients to Gateway WebSocket and Game gRPC snapshots.
-- [ ] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 3D mobile battle royale loop.
+- [ ] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
 - [ ] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
 - [ ] **Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy** - Harden failures and make the system transportable/deployable.
 - [ ] **Phase 8: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
@@ -34,7 +34,7 @@ Plans:
 - [x] 01-02-PLAN.md — Implement Lobby and Game gRPC services with in-memory state. (correlated logs still pending)
 - [x] 01-03-PLAN.md — Implement Gateway HTTP JSON web services that call Lobby through gRPC (grpc-gateway).
 - [x] 01-04-PLAN.md — Package Gateway, Lobby and Game in Docker Compose with README demo commands.
-- [ ] 01-05-PLAN.md — Write architecture docs, message docs, role placeholders and Entrega 1 report draft. (partial: docs/architecture.md done; messages.md, roles.md and report draft pending)
+- [x] 01-05-PLAN.md — Write architecture docs, message docs, role placeholders and Entrega 1 report draft. (docs/architecture.md, docs/messages.md, docs/roles.md done; docs/report/entrega1.tex + build.ps1 geram entrega1.pdf de 4 páginas; nomes dos alunos ainda como PLACEHOLDER)
 
 ### Phase 2: Team Development System
 **Goal**: Nine students can work in parallel without breaking contracts or architecture consistency.  
@@ -71,11 +71,11 @@ Plans:
 **Plans**: TBD
 
 ### Phase 5: Playable Voxel Battle Royale
-**Goal**: The game is genuinely playable as a 3D mobile voxel battle royale with a complete match loop.  
+**Goal**: The game is genuinely playable as a 2D mobile voxel battle royale with a complete match loop.  
 **Depends on**: Phase 4  
 **Requirements**: GAME-01, GAME-02, GAME-03, GAME-04, GAME-05, GAME-06, GAME-07, GAME-08  
 **Success Criteria** (what must be TRUE):
-  1. Player can move in a Babylon.js voxel arena with touch controls on mobile.
+  1. Player can move in a Phaser 2D arena with touch controls on mobile.
   2. Game service spawns players, chests and three weapon types.
   3. Player can open chests, collect weapons, attack and eliminate opponents.
   4. Safe zone shrinks over time and forces match conclusion within 5 minutes.
@@ -121,7 +121,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Entrega 1 Distributed Skeleton | 4/5 | In progress (code done, report pending) | - |
+| 1. Entrega 1 Distributed Skeleton | 5/5 | Code + docs/report draft done (faltam nomes reais dos alunos) | - |
 | 2. Team Development System | 0/0 | Not started | - |
 | 3. QR Lobby and Match Start | 0/0 | Not started | - |
 | 4. Realtime Network Pipeline | 0/0 | Not started | - |

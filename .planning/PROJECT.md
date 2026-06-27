@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Voxel Royale Distribuido e um mini battle royale 3D voxel, mobile-first, que roda direto no navegador do celular. Os jogadores entram por QR Code, informam um nome e participam de partidas rapidas de ate 5 minutos com ate 50 jogadores simultaneos.
+Voxel Royale Distribuido e um mini battle royale 2D top-down, mobile-first, que roda direto no navegador do celular. Os jogadores entram por QR Code, informam um nome e participam de partidas rapidas de ate 5 minutos com ate 50 jogadores simultaneos.
 
 O projeto e um trabalho pratico de Computacao Distribuida da PUC Minas. A prioridade e demonstrar uma arquitetura distribuida clara, usando Go, microsservicos, gRPC interno, web services, concorrencia, tolerancia a falhas, observabilidade e testes de estresse, sem abrir mao de uma experiencia de jogo realmente jogavel e surpreendente para uma entrega academica.
 
@@ -20,7 +20,7 @@ Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real 
 
 - [ ] Jogador entra por QR Code, informa nome e entra em uma sala sem conta ou autenticacao.
 - [ ] Sistema suporta uma partida com 50 jogadores simultaneos, reais ou simulados em teste de carga.
-- [ ] Cliente mobile renderiza um mundo 3D voxel em Babylon.js e oferece controles touch jogaveis.
+- [ ] Cliente mobile renderiza uma arena 2D top-down em Phaser e oferece controles touch jogaveis.
 - [ ] Backend Go e dividido em microsservicos stateless com comunicacao interna via gRPC.
 - [ ] Sistema expõe web services para sala, lobby, status, telemetria e operacao.
 - [ ] Game server e autoritativo sobre estado de partida, dano, colisao, eliminacao e safe zone.
@@ -47,7 +47,7 @@ Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real 
 - Primeira entrega: implementar pelo menos dois requisitos da lista do enunciado. O grupo escolheu gRPC/RPC e web services.
 - Primeira entrega tambem exige relatorio em PDF de ate 4 paginas no template SBC, com problema, arquitetura, requisitos implementados, desafios e papel de cada aluno.
 - Segunda entrega: expandir a base, implementar tratamento de falhas, escolher pelo menos um requisito adicional, entregar codigo-fonte com instrucoes e apresentar em ate 10 minutos.
-- Stack decidida: backend em Go, comunicacao interna gRPC/Protocol Buffers, comunicacao cliente-servidor via WebSocket, frontend com Babylon.js + TypeScript, infraestrutura Docker Compose.
+- Stack decidida: backend em Go, comunicacao interna gRPC/Protocol Buffers, comunicacao cliente-servidor via WebSocket, frontend com Phaser (2D) + TypeScript, infraestrutura Docker Compose.
 - Deploy alvo: Docker Compose transportavel, com caminho claro para VPS Hostinger.
 
 ## Constraints
@@ -68,7 +68,7 @@ Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real 
 | gRPC interno | Atende requisito da Entrega 1 e deixa contratos tipados entre microsservicos. | - Pending |
 | Web services HTTP | Atende requisito da Entrega 1 e facilita operacao, lobby, healthchecks e demonstracao. | - Pending |
 | WebSocket para tempo real | Menor complexidade que WebRTC para v1 e suficiente para entrada de jogador e broadcast de snapshots. | - Pending |
-| Babylon.js + TypeScript no cliente | Boa base para 3D web mobile, controles touch e assets prontos. | - Pending |
+| Phaser (2D) + TypeScript no cliente | Engine 2D mais simples que um motor 3D para o escopo academico; o backend ja trabalha em coordenadas 2D (x/y). Controles touch e assets prontos. | - Pending |
 | Servidor autoritativo | Reduz trapaças e deixa claro quem decide o estado canonico da partida. | - Pending |
 | Docker Compose transportavel | Facilita avaliacao, reproducibilidade e deploy em VPS Hostinger. | - Pending |
 | Padrao by-design | Necessario para coordenar 9 alunos e manter qualidade academica/top-tier. | - Pending |

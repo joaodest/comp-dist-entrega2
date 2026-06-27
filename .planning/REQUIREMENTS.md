@@ -42,7 +42,7 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Gameplay
 
-- [ ] **GAME-01**: Cliente renderiza uma arena 3D voxel em Babylon.js no navegador mobile.
+- [ ] **GAME-01**: Cliente renderiza uma arena 2D top-down em Phaser no navegador mobile.
 - [ ] **GAME-02**: Jogador consegue mover o personagem com controles touch.
 - [ ] **GAME-03**: Game service gera spawns de jogadores, baus e armas.
 - [ ] **GAME-04**: Jogador consegue abrir baus e coletar armas.

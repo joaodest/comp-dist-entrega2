@@ -1,1 +1,12 @@
 third_party
+
+# Intermediários de build LaTeX (relatório SBC)
+docs/report/*.aux
+docs/report/*.fdb_latexmk
+docs/report/*.fls
+docs/report/*.log
+docs/report/*.out
+docs/report/*.toc
+docs/report/*.bbl
+docs/report/*.blg
+docs/report/*.synctex.gz
