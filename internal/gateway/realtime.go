@@ -8,6 +8,7 @@ import (
 	"time"
 
 	matchv1 "voxel-royale/gen/match"
+	"voxel-royale/internal/observability"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -44,6 +45,7 @@ const (
 func (b *realtimeBridge) handleMatchWS(w http.ResponseWriter, r *http.Request) {
 	playerID := strings.TrimSpace(r.URL.Query().Get("player"))
 	if playerID == "" {
+		observability.GatewayRealtimeErrors.WithLabelValues("missing_player").Inc()
 		http.Error(w, "query param 'player' is required", http.StatusBadRequest)
 		return
 	}
@@ -51,15 +53,20 @@ func (b *realtimeBridge) handleMatchWS(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
+		observability.GatewayRealtimeErrors.WithLabelValues("upgrade").Inc()
 		return // o upgrader ja respondeu o erro HTTP
 	}
 	defer func() { _ = conn.Close() }()
+	observability.GatewayWebSocketSessions.Inc()
+	observability.GatewayActiveWebSockets.Inc()
+	defer observability.GatewayActiveWebSockets.Dec()
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
 	stream, err := b.game.WatchMatch(ctx, &matchv1.WatchMatchRequest{RoomId: roomID, PlayerId: playerID})
 	if err != nil {
+		observability.GatewayRealtimeErrors.WithLabelValues("watch_match").Inc()
 		log.Printf("gateway ws: WatchMatch failed (room=%q player=%q): %v", roomID, playerID, err)
 		return
 	}
@@ -90,10 +97,14 @@ func (b *realtimeBridge) pumpSnapshots(
 		for {
 			snapshot, err := stream.Recv()
 			if err != nil {
+				if ctx.Err() == nil {
+					observability.GatewayRealtimeErrors.WithLabelValues("snapshot_recv").Inc()
+				}
 				return
 			}
 			data, err := jsonSnapshot.Marshal(snapshot)
 			if err != nil {
+				observability.GatewayRealtimeErrors.WithLabelValues("snapshot_marshal").Inc()
 				continue
 			}
 			select {
@@ -119,8 +130,11 @@ func (b *realtimeBridge) pumpSnapshots(
 			}
 			_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				observability.GatewayRealtimeErrors.WithLabelValues("snapshot_write").Inc()
 				return
 			}
+			observability.GatewayWebSocketMessages.WithLabelValues("out").Inc()
+			observability.GatewayWebSocketBytes.WithLabelValues("out").Add(float64(len(data)))
 		}
 	}
 }
@@ -139,9 +153,12 @@ func (b *realtimeBridge) pumpInputs(ctx context.Context, conn *websocket.Conn, r
 			return
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(pongWait))
+		observability.GatewayWebSocketMessages.WithLabelValues("in").Inc()
+		observability.GatewayWebSocketBytes.WithLabelValues("in").Add(float64(len(data)))
 
 		var input matchv1.PlayerInput
 		if err := protojson.Unmarshal(data, &input); err != nil {
+			observability.GatewayRealtimeErrors.WithLabelValues("input_unmarshal").Inc()
 			continue // ignora frames malformados sem derrubar a sessao
 		}
 		// A identidade e a sala vem da conexao (autoridade do Gateway), nunca do
@@ -149,11 +166,14 @@ func (b *realtimeBridge) pumpInputs(ctx context.Context, conn *websocket.Conn, r
 		input.PlayerId = playerID
 		input.RoomId = roomID
 
+		start := time.Now()
 		if _, err := b.game.PushInput(ctx, &input); err != nil {
 			if ctx.Err() != nil {
 				return
 			}
+			observability.GatewayRealtimeErrors.WithLabelValues("push_input").Inc()
 			log.Printf("gateway ws: PushInput failed (room=%q player=%q): %v", roomID, playerID, err)
 		}
+		observability.GatewayPushInputDuration.Observe(time.Since(start).Seconds())
 	}
 }

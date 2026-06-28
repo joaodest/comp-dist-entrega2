@@ -6,6 +6,7 @@ import (
 
 	lobbyv1 "voxel-royale/gen/lobby"
 	matchv1 "voxel-royale/gen/match"
+	"voxel-royale/internal/observability"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -18,6 +19,7 @@ func NewHealthMux() *http.ServeMux {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	mux.Handle("/metrics", observability.MetricsHandler())
 	return mux
 }
 
@@ -27,7 +29,10 @@ func NewHealthMux() *http.ServeMux {
 // WatchMatch do Game (Fase 4).
 func NewProxyMux(ctx context.Context, gameGRPCAddr, lobbyGRPCAddr string) (http.Handler, error) {
 	proxy := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		observability.GRPCClientOption(),
+	}
 
 	if err := matchv1.RegisterGameServiceHandlerFromEndpoint(ctx, proxy, gameGRPCAddr, opts); err != nil {
 		return nil, err

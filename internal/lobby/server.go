@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	lobbyv1 "voxel-royale/gen/lobby"
+	"voxel-royale/internal/observability"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -102,6 +103,8 @@ func (s *Server) CreateRoom(_ context.Context, req *lobbyv1.CreateRoomRequest) (
 		nextPlayerID: 2,
 	}
 	s.rooms[roomID] = r
+	s.observeStateLocked()
+	observability.LobbyRoomEvents.WithLabelValues("create", "ok").Inc()
 
 	return roomToResponse(r), nil
 }
@@ -139,6 +142,8 @@ func (s *Server) JoinRoom(_ context.Context, req *lobbyv1.JoinRoomRequest) (*lob
 	}
 	r.players = append(r.players, player)
 	r.playerSet[playerID] = true
+	s.observeStateLocked()
+	observability.LobbyRoomEvents.WithLabelValues("join", "ok").Inc()
 
 	return roomToResponse(r), nil
 }
@@ -192,6 +197,7 @@ func (s *Server) StartRoom(ctx context.Context, req *lobbyv1.StartRoomRequest) (
 
 	if err := s.triggerMatch(ctx, roomID, maxPlayers, roster); err != nil {
 		s.revertToWaiting(roomID)
+		observability.LobbyRoomEvents.WithLabelValues("start", "error").Inc()
 		return nil, status.Errorf(codes.Internal, "failed to start match for room %s: %v", roomID, err)
 	}
 
@@ -201,6 +207,8 @@ func (s *Server) StartRoom(ctx context.Context, req *lobbyv1.StartRoomRequest) (
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "room %s not found", roomID)
 	}
+	s.observeStateLocked()
+	observability.LobbyRoomEvents.WithLabelValues("start", "ok").Inc()
 	return roomToResponse(r), nil
 }
 
@@ -264,6 +272,8 @@ func (s *Server) LeaveRoom(_ context.Context, req *lobbyv1.LeaveRoomRequest) (*l
 	}
 
 	resp := roomToResponse(r)
+	s.observeStateLocked()
+	observability.LobbyRoomEvents.WithLabelValues("leave", "ok").Inc()
 	return resp, nil
 }
 func (r *room) allReady() bool {
@@ -351,6 +361,7 @@ func (s *Server) SetReady(ctx context.Context, req *lobbyv1.SetReadyRequest) (*l
 	if autoStart {
 		if err := s.triggerMatch(ctx, roomID, maxPlayers, roster); err != nil {
 			s.revertToWaiting(roomID)
+			observability.LobbyRoomEvents.WithLabelValues("ready", "error").Inc()
 			return nil, status.Errorf(codes.Internal, "failed to start match for room %s: %v", roomID, err)
 		}
 	}
@@ -361,7 +372,25 @@ func (s *Server) SetReady(ctx context.Context, req *lobbyv1.SetReadyRequest) (*l
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "room %s not found", roomID)
 	}
+	s.observeStateLocked()
+	if autoStart {
+		observability.LobbyRoomEvents.WithLabelValues("ready_auto_start", "ok").Inc()
+	} else {
+		observability.LobbyRoomEvents.WithLabelValues("ready", "ok").Inc()
+	}
 	return roomToResponse(r), nil
+}
+
+func (s *Server) observeStateLocked() {
+	var players int
+	for _, room := range s.rooms {
+		if room == nil {
+			continue
+		}
+		players += len(room.players)
+	}
+	observability.LobbyRooms.Set(float64(len(s.rooms)))
+	observability.LobbyPlayers.Set(float64(players))
 }
 
 func roomToResponse(r *room) *lobbyv1.RoomResponse {

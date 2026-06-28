@@ -95,6 +95,8 @@ curl -X POST http://localhost:8080/v1/match/stream \
 - [Architecture update](docs/architecture.md): arquitetura implementada em relacao ao plano original.
 - [Implementation delta](docs/implementation-delta.md): checklist do que foi feito, desvios e gaps restantes.
 - [Team development](docs/team-development.md): guia by-design da Fase 2 para ownership, contratos, testes e reviews.
+- [Observability and stress](docs/observability.md): Prometheus/Grafana/Jaeger e runner de 50 jogadores da Fase 6.
+- [Stress results](docs/stress-results.md): smoke local com 50 jogadores simultâneos.
 - [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
 
 ## Frontend / Cliente (Phaser 2D)
@@ -121,6 +123,21 @@ npm run dev      # http://localhost:5173
 
 > `POST /v1/match/stream` permanece como demo/compatibilidade por `curl`; o jogo real usa
 > WebSocket + `PushInput`/`WatchMatch`.
+
+## Observabilidade e Carga (Fase 6)
+
+Com a stack Docker ativa, Prometheus, Grafana e Jaeger tambem sobem para demonstrar
+o comportamento distribuido:
+
+```bash
+docker compose -f deployments/docker-compose.yml up --build
+make stress50
+```
+
+- Métricas Prometheus: `http://localhost:8080/metrics`, `:8081/metrics`, `:8082/metrics`.
+- Dashboard Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`.
+- Traces Jaeger: `http://localhost:16686/search`.
+- Runner de carga: `go run ./tools/stress50 -players 50 -duration 30s`.
 
 ## Smoke Test
 

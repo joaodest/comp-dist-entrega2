@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real no qual 50 jogadores participam de uma partida battle royale voxel com backend Go autoritativo e comunicacao entre servicos via gRPC.  
-**Current focus:** Entrega 2 — Fase 5 concluída: loop de partida jogável, zona segura de até 5 minutos e tela final com ranking. Próximo: Fase 6 (observabilidade + prova de 50 jogadores). (Entrega 1 funcional; faltam nomes reais dos alunos.)
+**Current focus:** Entrega 2 — Fase 6 concluída: observabilidade com OpenTelemetry/Prometheus/Grafana/Jaeger e prova local de 50 jogadores simulados. Próximo: Fase 7 (tolerância a falhas + deploy/VPS). (Entrega 1 funcional; faltam nomes reais dos alunos.)
 
 ## Current Position
 
-**Phase:** 5  
-**Plan:** 01-01..01-05; 02-01 by-design; 03-01 QR lobby + Lobby→Game match start; 04-01 realtime pipeline; 05-01 playable loop + final ranking  
-**Status:** Distributed skeleton + by-design docs + Fases 3, 4 e 5 completas. Game roda relógio de servidor (15 Hz) por sala com `PushInput`/`WatchMatch`, duração de até 4500 ticks (~5 min), safe zone progressiva, baús/armas/dano/eliminação/ranking; Gateway expõe WebSocket `/v1/match/ws`; cliente Phaser usa modelo push (`RealtimeClient`), controles touch/teclado, auto-alvo para ataque, fallback offline e tela final com ranking. Faltam nomes reais dos alunos.  
-**Progress:** ██████░░░░ ~62%
+**Phase:** 6  
+**Plan:** 01-01..01-05; 02-01 by-design; 03-01 QR lobby + Lobby→Game match start; 04-01 realtime pipeline; 05-01 playable loop + final ranking; 06-01 observability + stress proof  
+**Status:** Distributed skeleton + by-design docs + Fases 3, 4, 5 e 6 completas. Game roda relógio de servidor (15 Hz) por sala com `PushInput`/`WatchMatch`, duração de até 4500 ticks (~5 min), safe zone progressiva, baús/armas/dano/eliminação/ranking; Gateway expõe WebSocket `/v1/match/ws`; cliente Phaser usa modelo push (`RealtimeClient`). Observabilidade: `/metrics` Prometheus nos três serviços, OpenTelemetry HTTP/gRPC exportando OTLP para Jaeger no Compose, Grafana provisionado e runner `tools/stress50`/`make stress50`. Smoke local: 50/50 conexões, 3.750 inputs e 3.750 snapshots em 5s, zero erros do simulador. Faltam nomes reais dos alunos.  
+**Progress:** ████████░░ ~75%
 
 ## Performance Metrics
 
@@ -24,6 +24,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Phase 3 plans complete: 1/1 (`LOBB-01..03` done, `LOBB-04` partial)
 - Phase 4 plans complete: 1/1 (`NETW-01..04` done)
 - Phase 5 plans complete: 1/1 (`GAME-01..08` done)
+- Phase 6 plans complete: 1/1 (`NETW-05`, `OBSV-01..05` done)
 - Current delivery target: Entrega 2
 
 ## Accumulated Context
@@ -50,6 +51,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Fase 3 concluída: contrato `GameService.StartMatch` (gRPC interno) + `room_id` no `PlayerInput`; Game passou a manter partidas por sala (`matches map[string]*matchState`, chave `room_id`, mais a global `__global__`); Lobby chama o Game ao iniciar (start do dono e auto-start do `SetReady`), fora do lock e com revert para `WAITING` em falha; `services/lobby` disca `GAME_GRPC_ADDR` e o Compose adiciona `depends_on: game`; cliente Phaser ganhou `lobby.ts`/`lobbyUI.ts`/`session.ts` (criar/entrar/QR/ready/start) com dep `qrcode`. Validado ponta a ponta via curl (start cria partida da sala com roster; global isolado).
 - Fase 4 concluída (pipeline de tempo real): proto ganhou `PushInput(PlayerInput) returns (InputAck)` e `WatchMatch(WatchMatchRequest) returns (stream GameState)`, ambos internos (sem HTTP). Game (`internal/game/realtime.go`) roda um **relógio de servidor** por sala (`tickHz=15`) iniciado sob demanda no 1º assinante de `WatchMatch` e parado quando o último sai; inputs são bufferizados (`pendingInputs`, último vence) e consumidos por `advanceTick`; snapshots vão a `subscribers` com envio não-bloqueante (descarta em cliente lento). `StreamMatch` permanece unário/legado intacto (testes preservados). Gateway (`internal/gateway/realtime.go`, dep `github.com/gorilla/websocket`) expõe `GET /v1/match/ws?room&player`: WS→`PushInput` e `WatchMatch`→WS, com ping/pong e reescrita de `playerId`/`roomId` por autoridade. Cliente: `net.ts` ganhou `RealtimeClient` (WS, reconexão única, timeout→offline); `GameScene` virou push-based (envia input a cada `SEND_MS`, lê snapshot do WS, interpola) com fallback `OfflineDriver`; `vite.config.ts` com `ws:true`. **Decisão:** o relógio do servidor substitui o auto-restart unário da Fase 1 para partidas de sala; `StreamMatch` fica só para demo/curl. **Decisão:** snapshots WS usam `protojson` (mesmo camelCase/int64-string dos web services), então `frontend/src/types.ts` serve aos dois transportes.
 - Fase 5 concluída (loop jogável): `maxMatchTicks` passou para `5*60*tickHz` (4500 ticks, ~5 min); `safeZoneAtTick` limita fase a `0..4`; `advanceTick` ignora input stale como o caminho unário; cliente envia auto-alvo ao atacar, mostra tela final com ranking (`matchEnded` + `ranking`) e o fallback offline também encerra e ranqueia a partida.
+- Fase 6 concluída (observabilidade + carga): pacote `internal/observability` centraliza Prometheus e OpenTelemetry; Gateway/Lobby/Game expõem `/metrics`; Gateway mede WebSocket, bytes, erros e latência `PushInput`; Game mede inputs, streams, ticks, duração do tick, assinantes, jogadores e drops; Lobby mede salas/jogadores/eventos. Compose adicionou Prometheus (`:9090`), Grafana (`:3000`) com dashboard provisionado e Jaeger (`:16686`) recebendo OTLP HTTP (`:4318`). `tools/stress50`/`make stress50` cria sala, conecta bots via WebSocket e envia inputs; `docs/stress-results.md` registrou smoke local com 50/50 conexões, 3.750 inputs/snapshots em 5s e zero erros.
 
 ### Todos
 
@@ -62,6 +64,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Lobby start-by-time-limit (LOBB-04).
 - Use the Phase 2 guide as gate for upcoming work: every task should name requirement, owner, contract impact, validation and docs affected.
 - [x] **Refactor de tempo real (Fase 4):** servidor avança ticks no próprio relógio (~15 Hz) por sala + transporte WebSocket (snapshots desacoplados do request). O auto-restart unário deixou de governar partidas de sala (segue só no caminho legado `StreamMatch`).
+- [x] **Observabilidade/carga (Fase 6):** Prometheus + OpenTelemetry + Grafana/Jaeger + runner `stress50` e resultado de 50 jogadores registrado.
 - (Fase 7) Desconexão de cliente: hoje o último input bufferizado continua sendo aplicado se o WS cair sem enviar zerado; tratar timeout/expurgo de input por jogador inativo ao endurecer tolerância a falhas.
 
 ### Blockers
@@ -70,22 +73,23 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Session Continuity
 
-Fases 1–5 implementadas e documentadas. Backend Go compila e passa nos testes
-(`go test ./...`); frontend type-checka (`tsc --noEmit`). A partida em tempo
-real roda por sala via WebSocket, dura até 5 minutos no relógio do servidor,
-aplica baús/armas/dano/zona/ranking no Game e mostra ranking final no cliente.
-O pendente administrativo segue sendo preencher os nomes reais dos alunos
-(`PLACEHOLDER`).
+Fases 1–6 implementadas e documentadas. Backend Go compila e passa nos testes
+(`go test ./...`); `docker compose -f deployments/docker-compose.yml config`
+valida; smoke local `tools/stress50` conectou 50/50 bots e recebeu 3.750
+snapshots em 5s. A partida em tempo real roda por sala via WebSocket, dura até
+5 minutos no relógio do servidor, aplica baús/armas/dano/zona/ranking no Game e
+mostra ranking final no cliente. O pendente administrativo segue sendo preencher
+os nomes reais dos alunos (`PLACEHOLDER`).
 
 Next recommended command:
 
 ```text
-Start Phase 6 (Observability and 50-Player Stress Proof): métricas/traces + runner de 50 jogadores.
+Start Phase 7 (Fault Tolerance, Stateless Infra and VPS Deploy): desconexão de cliente, falha gRPC controlada, readiness e deploy.
 ```
 
-A Fase 6 deve medir o que a Fase 5 tornou jogável: tick rate, conexões
-WebSocket, latência Gateway→Game, payload/banda, erros e simulação de 50
-jogadores enviando inputs e recebendo snapshots.
+A Fase 7 deve endurecer o que a Fase 6 tornou mensurável: expurgo de inputs de
+clientes desconectados, comportamento degradado em falhas gRPC, readiness checks
+e instruções de deploy local/VPS.
 
 ---
-*State updated: 2026-06-28 — Fase 5 concluída (loop jogável, safe zone de 5 minutos e ranking final; GAME-01..08). TODO aberto: preencher nomes reais (admin), observabilidade/carga na Fase 6 e tratamento de desconexão na Fase 7.*
+*State updated: 2026-06-28 — Fase 6 concluída (OpenTelemetry, Prometheus/Grafana/Jaeger, runner e smoke 50-player; NETW-05, OBSV-01..05). TODO aberto: preencher nomes reais (admin), desconexão/falhas/deploy na Fase 7.*

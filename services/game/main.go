@@ -12,6 +12,7 @@ import (
 
 	matchv1 "voxel-royale/gen/match"
 	"voxel-royale/internal/game"
+	"voxel-royale/internal/observability"
 
 	"google.golang.org/grpc"
 )
@@ -23,7 +24,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	grpcServer := grpc.NewServer()
+	shutdownTracing, err := observability.SetupTracing(ctx, "voxel-game")
+	if err != nil {
+		log.Printf("game tracing disabled: %v", err)
+	} else {
+		defer func() { _ = shutdownTracing(context.Background()) }()
+	}
+
+	grpcServer := grpc.NewServer(observability.GRPCServerOption())
 	matchv1.RegisterGameServiceServer(grpcServer, game.NewServer())
 
 	listener, err := net.Listen("tcp", grpcAddr)
@@ -56,7 +64,8 @@ func healthServer(addr string) *http.Server {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	return &http.Server{Addr: addr, Handler: mux}
+	mux.Handle("/metrics", observability.MetricsHandler())
+	return &http.Server{Addr: addr, Handler: observability.HTTPHandler("game-health", mux)}
 }
 
 func env(key, fallback string) string {

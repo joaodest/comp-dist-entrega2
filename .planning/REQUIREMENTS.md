@@ -38,7 +38,7 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 - [x] **NETW-02**: Cliente envia inputs de movimento e acoes com sequencia/timestamp suficiente para reconciliacao.
 - [x] **NETW-03**: Gateway encaminha inputs ao Game service via gRPC.
 - [x] **NETW-04**: Game service envia snapshots de estado para o Gateway distribuir aos clientes.
-- [ ] **NETW-05**: Sistema suporta ate 50 jogadores simultaneos em uma partida real ou simulada.
+- [x] **NETW-05**: Sistema suporta ate 50 jogadores simultaneos em uma partida real ou simulada.
 
 ### Gameplay
 
@@ -53,11 +53,11 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Observability and Scale
 
-- [ ] **OBSV-01**: Servicos emitem traces OpenTelemetry para chamadas HTTP, WebSocket lifecycle e gRPC.
-- [ ] **OBSV-02**: Prometheus coleta metricas de tick rate, latencia gRPC, jogadores conectados, banda/payload e erros.
-- [ ] **OBSV-03**: Grafana ou Jaeger permite demonstrar visualmente o fluxo Gateway -> Lobby/Game.
-- [ ] **OBSV-04**: Teste de estresse simula 50 jogadores conectando, enviando inputs e recebendo snapshots.
-- [ ] **OBSV-05**: Resultado do teste de estresse e registrado para embasar escalabilidade no relatorio/apresentacao.
+- [x] **OBSV-01**: Servicos emitem traces OpenTelemetry para chamadas HTTP, WebSocket lifecycle e gRPC.
+- [x] **OBSV-02**: Prometheus coleta metricas de tick rate, latencia gRPC, jogadores conectados, banda/payload e erros.
+- [x] **OBSV-03**: Grafana ou Jaeger permite demonstrar visualmente o fluxo Gateway -> Lobby/Game.
+- [x] **OBSV-04**: Teste de estresse simula 50 jogadores conectando, enviando inputs e recebendo snapshots.
+- [x] **OBSV-05**: Resultado do teste de estresse e registrado para embasar escalabilidade no relatorio/apresentacao.
 
 ### Fault Tolerance and Deploy
 
@@ -122,7 +122,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NETW-02 | Phase 4 | Done (inputs sequenciados pelo WebSocket) |
 | NETW-03 | Phase 4 | Done (Gateway → Game via gRPC `PushInput`) |
 | NETW-04 | Phase 4 | Done (Game `WatchMatch` stream + fan-out do Gateway) |
-| NETW-05 | Phase 6 | Pending |
+| NETW-05 | Phase 6 | Done (`tools/stress50`; smoke local 50/50 conexoes, 3.750 inputs/snapshots em 5s) |
 | GAME-01 | Phase 5 | Done (arena Phaser 2D top-down renderizada no cliente) |
 | GAME-02 | Phase 5 | Done (joystick touch + teclado) |
 | GAME-03 | Phase 5 | Done (spawns de jogadores, 9 baus e armas no Game) |
@@ -131,11 +131,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GAME-06 | Phase 5 | Done (dano, vida, eliminacao e estatisticas validados no Game) |
 | GAME-07 | Phase 5 | Done (safe zone 5 min/4500 ticks no relogio de 15 Hz) |
 | GAME-08 | Phase 5 | Done (matchEnded + ranking final no Game e tela final no cliente) |
-| OBSV-01 | Phase 6 | Pending |
-| OBSV-02 | Phase 6 | Pending |
-| OBSV-03 | Phase 6 | Pending |
-| OBSV-04 | Phase 6 | Pending |
-| OBSV-05 | Phase 6 | Pending |
+| OBSV-01 | Phase 6 | Done (OpenTelemetry HTTP/gRPC + OTLP para Jaeger no Compose) |
+| OBSV-02 | Phase 6 | Done (`/metrics` Prometheus em Gateway/Lobby/Game com realtime, tick, sala e erro) |
+| OBSV-03 | Phase 6 | Done (Prometheus + Grafana provisionado; Jaeger UI no Compose) |
+| OBSV-04 | Phase 6 | Done (`make stress50` / `go run ./tools/stress50`) |
+| OBSV-05 | Phase 6 | Done (`docs/stress-results.md`) |
 | FAIL-01 | Phase 7 | Pending |
 | FAIL-02 | Phase 7 | Pending |
 | FAIL-03 | Phase 7 | Pending |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-06-28 after Phase 5 (playable loop, 5-minute safe zone and final ranking; GAME-01..08 done)*
+*Last updated: 2026-06-28 after Phase 6 (observability, dashboard and 50-player stress proof; NETW-05 and OBSV-01..05 done)*

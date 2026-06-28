@@ -6,6 +6,7 @@ import (
 	"time"
 
 	matchv1 "voxel-royale/gen/match"
+	"voxel-royale/internal/observability"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,9 +34,11 @@ type subscriber struct {
 // proximo tick. O ultimo input por jogador vence (sobrescreve).
 func (s *Server) PushInput(_ context.Context, input *matchv1.PlayerInput) (*matchv1.InputAck, error) {
 	if input == nil || strings.TrimSpace(input.PlayerId) == "" {
+		observability.GamePushInputs.WithLabelValues("rejected").Inc()
 		return nil, status.Error(codes.InvalidArgument, "player_id is required")
 	}
 	if !isFinite(input.MoveX) || !isFinite(input.MoveY) || !isFinite(input.AimX) || !isFinite(input.AimY) {
+		observability.GamePushInputs.WithLabelValues("rejected").Inc()
 		return nil, status.Error(codes.InvalidArgument, "movement and aim values must be finite")
 	}
 
@@ -52,7 +55,9 @@ func (s *Server) PushInput(_ context.Context, input *matchv1.PlayerInput) (*matc
 	}
 	match.ensurePlayer(playerID)
 	match.pendingInputs[playerID] = input
+	s.observeStateLocked()
 
+	observability.GamePushInputs.WithLabelValues("accepted").Inc()
 	return &matchv1.InputAck{Accepted: true, AppliedSequence: input.InputSequence}, nil
 }
 
@@ -60,8 +65,9 @@ func (s *Server) PushInput(_ context.Context, input *matchv1.PlayerInput) (*matc
 // pelo stream gRPC (NETW-04). O Gateway repassa cada snapshot ao WebSocket do
 // jogador. O relogio da partida e iniciado sob demanda no primeiro assinante e
 // parado quando o ultimo assinante desconecta.
-func (s *Server) WatchMatch(req *matchv1.WatchMatchRequest, stream matchv1.GameService_WatchMatchServer) error {
+func (s *Server) WatchMatch(req *matchv1.WatchMatchRequest, stream matchv1.GameService_WatchMatchServer) (err error) {
 	if req == nil {
+		observability.GameWatchStreams.WithLabelValues("rejected").Inc()
 		return status.Error(codes.InvalidArgument, "request is required")
 	}
 	matchKey := matchKeyFor(req.RoomId)
@@ -81,8 +87,18 @@ func (s *Server) WatchMatch(req *matchv1.WatchMatchRequest, stream matchv1.GameS
 	match.subs[sub] = struct{}{}
 	initial := match.snapshot()
 	s.ensureClockLocked(matchKey)
+	s.observeStateLocked()
 	s.mu.Unlock()
 
+	observability.GameActiveWatchStreams.Inc()
+	defer func() {
+		observability.GameActiveWatchStreams.Dec()
+		if err != nil && stream.Context().Err() == nil {
+			observability.GameWatchStreams.WithLabelValues("error").Inc()
+			return
+		}
+		observability.GameWatchStreams.WithLabelValues("closed").Inc()
+	}()
 	defer s.removeSubscriber(matchKey, sub)
 
 	if err := stream.Send(initial); err != nil {
@@ -121,6 +137,9 @@ func (s *Server) runClock(matchKey string) {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		start := time.Now()
+		ticked := false
+
 		s.mu.Lock()
 		match := s.matches[matchKey]
 		if match == nil {
@@ -136,6 +155,7 @@ func (s *Server) runClock(matchKey string) {
 		// publicando o snapshot final para que assinantes vejam o ranking.
 		if !match.matchEnded {
 			match.advanceTick()
+			ticked = true
 		}
 		snapshot := match.snapshot()
 		targets := make([]*subscriber, 0, len(match.subs))
@@ -148,7 +168,12 @@ func (s *Server) runClock(matchKey string) {
 			select {
 			case sub.ch <- snapshot:
 			default:
+				observability.GameSnapshotDrops.Inc()
 			}
+		}
+		if ticked {
+			observability.GameTicks.Inc()
+			observability.GameTickDuration.Observe(time.Since(start).Seconds())
 		}
 	}
 }
@@ -159,7 +184,22 @@ func (s *Server) removeSubscriber(matchKey string, sub *subscriber) {
 	defer s.mu.Unlock()
 	if match := s.matches[matchKey]; match != nil {
 		delete(match.subs, sub)
+		s.observeStateLocked()
 	}
+}
+
+func (s *Server) observeStateLocked() {
+	var players, subscribers int
+	for _, match := range s.matches {
+		if match == nil {
+			continue
+		}
+		players += len(match.players)
+		subscribers += len(match.subs)
+	}
+	observability.GameActiveMatches.Set(float64(len(s.matches)))
+	observability.GamePlayers.Set(float64(players))
+	observability.GameActiveSubscribers.Set(float64(subscribers))
 }
 
 // advanceTick e o passo autoritativo do relogio: aplica o input bufferizado de

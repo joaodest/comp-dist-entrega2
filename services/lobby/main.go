@@ -13,6 +13,7 @@ import (
 	lobbyv1 "voxel-royale/gen/lobby"
 	matchv1 "voxel-royale/gen/match"
 	"voxel-royale/internal/lobby"
+	"voxel-royale/internal/observability"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,7 +27,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	gameConn, err := grpc.NewClient(gameAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	shutdownTracing, err := observability.SetupTracing(ctx, "voxel-lobby")
+	if err != nil {
+		log.Printf("lobby tracing disabled: %v", err)
+	} else {
+		defer func() { _ = shutdownTracing(context.Background()) }()
+	}
+
+	gameConn, err := grpc.NewClient(
+		gameAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		observability.GRPCClientOption(),
+	)
 	if err != nil {
 		log.Fatalf("lobby could not create game client: %v", err)
 	}
@@ -35,7 +47,7 @@ func main() {
 	starter := &gameMatchStarter{client: matchv1.NewGameServiceClient(gameConn)}
 	lobbyServer := lobby.NewServer().WithMatchStarter(starter)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(observability.GRPCServerOption())
 	lobbyv1.RegisterLobbyServiceServer(grpcServer, lobbyServer)
 
 	listener, err := net.Listen("tcp", grpcAddr)
@@ -90,7 +102,8 @@ func healthServer(addr string) *http.Server {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	return &http.Server{Addr: addr, Handler: mux}
+	mux.Handle("/metrics", observability.MetricsHandler())
+	return &http.Server{Addr: addr, Handler: observability.HTTPHandler("lobby-health", mux)}
 }
 
 func env(key, fallback string) string {

@@ -160,6 +160,7 @@ func (s *Server) StartMatch(_ context.Context, req *matchv1.StartMatchRequest) (
 		match.clockRunning = old.clockRunning
 	}
 	s.matches[roomID] = match
+	s.observeStateLocked()
 
 	return &matchv1.StartMatchResponse{MatchId: roomID, Started: true}, nil
 }

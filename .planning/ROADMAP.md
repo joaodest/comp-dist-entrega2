@@ -11,7 +11,7 @@
 - [ ] **Phase 3: QR Lobby and Match Start** - Let players create, join and start rooms through QR Code and web services.
 - [ ] **Phase 4: Realtime Network Pipeline** - Connect browser clients to Gateway WebSocket and Game gRPC snapshots.
 - [x] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
-- [ ] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
+- [x] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
 - [ ] **Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy** - Harden failures and make the system transportable/deployable.
 - [ ] **Phase 8: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
 
@@ -104,7 +104,10 @@ Plans:
   3. A repeatable stress command simulates 50 players joining and sending gameplay inputs.
   4. Stress-test results are captured for report and presentation.
   5. The team can explain bottlenecks and scalability tradeoffs using measured data.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 06-01 — Observability + stress proof: Prometheus `/metrics` nos tres servicos, OpenTelemetry HTTP/gRPC com OTLP para Jaeger, Grafana provisionado no Compose, runner `tools/stress50`/`make stress50` e smoke local 50/50 conexoes registrado em `docs/stress-results.md`.
 
 ### Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy
 **Goal**: The distributed system handles common failures and can run from Docker Compose locally or on the Hostinger VPS.  
@@ -138,7 +141,7 @@ Plans:
 | 3. QR Lobby and Match Start | 1/1 | Done: QR lobby UI + Lobby→Game match start (room-scoped matches) | 2026-06-27 |
 | 4. Realtime Network Pipeline | 1/1 | Done: WebSocket + server-clock snapshots (NETW-01..04), validated end-to-end | 2026-06-28 |
 | 5. Playable Voxel Battle Royale | 1/1 | Done: full playable loop, 5-minute safe zone and final ranking screen (GAME-01..08) | 2026-06-28 |
-| 6. Observability and 50-Player Stress Proof | 0/0 | Not started | - |
+| 6. Observability and 50-Player Stress Proof | 1/1 | Done: OpenTelemetry + Prometheus/Grafana/Jaeger + runner e smoke 50-player (NETW-05, OBSV-01..05) | 2026-06-28 |
 | 7. Fault Tolerance, Stateless Infra and VPS Deploy | 0/0 | Not started | - |
 | 8. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
 
@@ -148,4 +151,4 @@ All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-28 to complete Phase 5 (playable loop + final ranking)*
+*Roadmap updated: 2026-06-28 to complete Phase 6 (observability + 50-player stress proof)*
