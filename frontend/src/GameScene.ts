@@ -4,8 +4,11 @@ import { Input } from './input';
 import type { RealtimeStatus } from './net';
 import { OfflineDriver, RealtimeClient } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
+import { Bullets } from './bullets';
 import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS, SERVER_TICK_HZ } from './config';
 import { session } from './session';
+
+type Heading = { x: number; y: number };
 
 export class GameScene extends Phaser.Scene {
   private controls: Input;
@@ -13,11 +16,15 @@ export class GameScene extends Phaser.Scene {
   private offline: OfflineDriver | null = null;
   private state: GameState | null = null;
   private renderPos = new Map<string, { x: number; y: number }>();
+  private headings = new Map<string, Heading>();
   private terrain!: Phaser.GameObjects.Graphics;
   private dyn!: Phaser.GameObjects.Graphics;
+  private fx!: Phaser.GameObjects.Graphics;
+  private bullets = new Bullets();
   private follow!: Phaser.GameObjects.Arc;
   private accum = 0;
   private endShown = false;
+  private lastFxTick = '';
 
   constructor(controls: Input) {
     super('game');
@@ -29,6 +36,7 @@ export class GameScene extends Phaser.Scene {
     this.terrain = this.add.graphics();
     drawTerrain(this.terrain);
     this.dyn = this.add.graphics();
+    this.fx = this.add.graphics();
 
     const center = worldToPx(0, 0);
     this.follow = this.add.circle(center.x, center.y, 1, 0x000000, 0);
@@ -47,6 +55,7 @@ export class GameScene extends Phaser.Scene {
       this.accum = 0;
       if (!this.state?.matchEnded) {
         const input = this.withAutoTarget(this.controls.sample());
+        if (input.isAttacking) this.tryLocalFire(input);
         if (this.offline) {
           this.state = this.offline.step(input);
         } else {
@@ -59,6 +68,9 @@ export class GameScene extends Phaser.Scene {
       if (live) this.state = live;
     }
     if (this.state) this.draw();
+
+    this.bullets.update(delta);
+    this.bullets.draw(this.fx);
   }
 
   private onStatus(status: RealtimeStatus) {
@@ -75,21 +87,53 @@ export class GameScene extends Phaser.Scene {
       const cur = this.renderPos.get(p.playerId);
       if (!cur) this.renderPos.set(p.playerId, target);
       else {
-        cur.x += (target.x - cur.x) * 0.25;
-        cur.y += (target.y - cur.y) * 0.25;
+        const dx = target.x - cur.x;
+        const dy = target.y - cur.y;
+        // Orienta o personagem (e a arma) pela direcao do movimento.
+        const mag = Math.hypot(dx, dy);
+        if (mag > 0.8) this.headings.set(p.playerId, { x: dx / mag, y: dy / mag });
+        cur.x += dx * 0.25;
+        cur.y += dy * 0.25;
       }
     }
     const ids = new Set(s.players.map((p) => p.playerId));
-    for (const id of [...this.renderPos.keys()]) if (!ids.has(id)) this.renderPos.delete(id);
+    for (const id of [...this.renderPos.keys()]) {
+      if (!ids.has(id)) {
+        this.renderPos.delete(id);
+        this.headings.delete(id);
+      }
+    }
+
+    // Reconstrucao dos projeteis a partir dos eventos de dano de cada snapshot.
+    if (s.tick !== this.lastFxTick) {
+      this.lastFxTick = s.tick;
+      this.bullets.onSnapshot(s, this.headings, session.myId);
+    }
 
     this.dyn.clear();
-    drawWorld(this.dyn, s, this.renderPos, session.myId);
+    drawWorld(this.dyn, s, this.renderPos, this.headings, session.myId);
 
     const me = this.renderPos.get(session.myId);
     if (me) this.follow.setPosition(me.x, me.y);
 
     this.updateHud(s);
     this.updateEndScreen(s);
+  }
+
+  /** Dispara o efeito visual do tiro do jogador local (responsivo). */
+  private tryLocalFire(input: PlayerInput) {
+    const me = this.state?.players.find((p) => p.playerId === session.myId && p.isAlive);
+    if (!me) return;
+    let to: { x: number; y: number } | undefined;
+    if (input.targetPlayerId) {
+      const tgt = this.state!.players.find((p) => p.playerId === input.targetPlayerId);
+      if (tgt) to = { x: tgt.x, y: tgt.y };
+    }
+    if (!to) {
+      const range = 14;
+      to = { x: me.x + input.aimX * range, y: me.y + input.aimY * range };
+    }
+    this.bullets.localFire({ x: me.x, y: me.y }, to, me.weapon, this.headings, session.myId);
   }
 
   private setStatus(status: RealtimeStatus) {
