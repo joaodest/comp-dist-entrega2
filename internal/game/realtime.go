@@ -26,7 +26,8 @@ const (
 // subscriber representa um cliente assinando os snapshots de uma partida via
 // WatchMatch. O Gateway abre um WatchMatch por WebSocket conectado.
 type subscriber struct {
-	ch chan *matchv1.GameState
+	ch       chan *matchv1.GameState
+	playerID string
 }
 
 // PushInput encaminha um input do cliente para o buffer da partida (NETW-03).
@@ -73,7 +74,10 @@ func (s *Server) WatchMatch(req *matchv1.WatchMatchRequest, stream matchv1.GameS
 	matchKey := matchKeyFor(req.RoomId)
 	playerID := strings.TrimSpace(req.PlayerId)
 
-	sub := &subscriber{ch: make(chan *matchv1.GameState, subscriberBuffer)}
+	sub := &subscriber{
+		ch:       make(chan *matchv1.GameState, subscriberBuffer),
+		playerID: playerID,
+	}
 
 	s.mu.Lock()
 	match := s.matches[matchKey]
@@ -83,6 +87,7 @@ func (s *Server) WatchMatch(req *matchv1.WatchMatchRequest, stream matchv1.GameS
 	}
 	if playerID != "" {
 		match.ensurePlayer(playerID)
+		match.connectedPlayers[playerID]++
 	}
 	match.subs[sub] = struct{}{}
 	initial := match.snapshot()
@@ -184,6 +189,14 @@ func (s *Server) removeSubscriber(matchKey string, sub *subscriber) {
 	defer s.mu.Unlock()
 	if match := s.matches[matchKey]; match != nil {
 		delete(match.subs, sub)
+		if sub.playerID != "" {
+			if match.connectedPlayers[sub.playerID] <= 1 {
+				delete(match.connectedPlayers, sub.playerID)
+				delete(match.pendingInputs, sub.playerID)
+			} else {
+				match.connectedPlayers[sub.playerID]--
+			}
+		}
 		s.observeStateLocked()
 	}
 }

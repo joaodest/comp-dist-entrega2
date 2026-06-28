@@ -97,6 +97,8 @@ curl -X POST http://localhost:8080/v1/match/stream \
 - [Team development](docs/team-development.md): guia by-design da Fase 2 para ownership, contratos, testes e reviews.
 - [Observability and stress](docs/observability.md): Prometheus/Grafana/Jaeger e runner de 50 jogadores da Fase 6.
 - [Stress results](docs/stress-results.md): smoke local com 50 jogadores simultâneos.
+- [Deploy](docs/deploy.md): Docker Compose completo, readiness e roteiro VPS da Fase 7.
+- [VPS provider setup](docs/vps-provider.md): checklist da Fase 8 para escolher/configurar a VPS real.
 - [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
 
 ## Frontend / Cliente (Phaser 2D)
@@ -138,6 +140,27 @@ make stress50
 - Dashboard Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`.
 - Traces Jaeger: `http://localhost:16686/search`.
 - Runner de carga: `go run ./tools/stress50 -players 50 -duration 30s`.
+
+## Tolerância a Falhas e Deploy Local (Fase 7)
+
+O Compose agora sobe o sistema completo: frontend, Gateway, Lobby, Game,
+Prometheus, Grafana e Jaeger.
+
+```bash
+docker compose -f deployments/docker-compose.yml config
+docker compose -f deployments/docker-compose.yml up --build
+```
+
+- Frontend: `http://localhost:5173`.
+- Readiness: `curl http://localhost:8080/readyz`.
+- Frontend health: `curl http://localhost:5173/frontend-healthz`.
+- Guia de deploy e checks de falha: [`docs/deploy.md`](docs/deploy.md).
+
+## Provedor VPS (Fase 8)
+
+O deploy remoto real depende de uma VPS provisionada pelo grupo. Use
+[`docs/vps-provider.md`](docs/vps-provider.md) para registrar provedor, plano, IP,
+SSH, firewall, Docker/Compose e a validação pública antes da fase de relatório.
 
 ## Smoke Test
 

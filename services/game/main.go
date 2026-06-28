@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 
 	matchv1 "voxel-royale/gen/match"
@@ -39,7 +40,8 @@ func main() {
 		log.Fatalf("game grpc listen failed: %v", err)
 	}
 
-	health := healthServer(healthAddr)
+	ready := &atomic.Bool{}
+	health := healthServer(healthAddr, ready)
 	go func() {
 		log.Printf("game health listening on %s", healthAddr)
 		if err := health.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -54,14 +56,22 @@ func main() {
 	}()
 
 	log.Printf("game grpc listening on %s", grpcAddr)
+	ready.Store(true)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("game grpc server failed: %v", err)
 	}
 }
 
-func healthServer(addr string) *http.Server {
+func healthServer(addr string, ready *atomic.Bool) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if !ready.Load() {
+			http.Error(w, "not ready", http.StatusServiceUnavailable)
+			return
+		}
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/metrics", observability.MetricsHandler())

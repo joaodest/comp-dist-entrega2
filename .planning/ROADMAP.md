@@ -2,7 +2,7 @@
 
 **Created:** 2026-04-24  
 **Depth:** comprehensive  
-**Requirements coverage:** 40/40 v1 requirements mapped
+**Requirements coverage:** 41/41 v1 requirements mapped
 
 ## Phases
 
@@ -12,8 +12,9 @@
 - [ ] **Phase 4: Realtime Network Pipeline** - Connect browser clients to Gateway WebSocket and Game gRPC snapshots.
 - [x] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
 - [x] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
-- [ ] **Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy** - Harden failures and make the system transportable/deployable.
-- [ ] **Phase 8: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
+- [x] **Phase 7: Fault Tolerance and Local Deploy Readiness** - Harden failures and make the system transportable/deployable.
+- [ ] **Phase 8: VPS Provider Setup and Remote Deploy** - Choose/configure the VPS provider and validate the system on a real remote host.
+- [ ] **Phase 9: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
 
 ## Phase Details
 
@@ -109,8 +110,8 @@ Plans:
 Plans:
 - [x] 06-01 — Observability + stress proof: Prometheus `/metrics` nos tres servicos, OpenTelemetry HTTP/gRPC com OTLP para Jaeger, Grafana provisionado no Compose, runner `tools/stress50`/`make stress50` e smoke local 50/50 conexoes registrado em `docs/stress-results.md`.
 
-### Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy
-**Goal**: The distributed system handles common failures and can run from Docker Compose locally or on the Hostinger VPS.  
+### Phase 7: Fault Tolerance and Local Deploy Readiness
+**Goal**: The distributed system handles common failures and can run from Docker Compose locally, ready to be moved to a VPS.  
 **Depends on**: Phase 6  
 **Requirements**: FAIL-01, FAIL-02, FAIL-03, DEPL-01, DEPL-02, DEPL-03  
 **Success Criteria** (what must be TRUE):
@@ -119,11 +120,26 @@ Plans:
   3. Fault-handling tests demonstrate the methods required for Entrega 2.
   4. Docker Compose starts all services, frontend and telemetry consistently.
   5. VPS deployment instructions are reproducible and include health/readiness validation.
+**Plans**: 1 plan
+
+Plans:
+- [x] 07-01 — Fault tolerance + deploy readiness: Game limpa input pendente quando jogador desconecta; Gateway/Lobby/Game expõem `/readyz`; Lobby usa timeout e erro controlado para falha Lobby→Game; Compose inclui frontend Nginx + backends + telemetria; `docs/deploy.md` documenta execução local/VPS; validação local subiu a stack completa e checou frontend health, Gateway readiness e métricas. O deploy remoto real fica separado na Fase 8.
+
+### Phase 8: VPS Provider Setup and Remote Deploy
+**Goal**: The group has a real VPS provider selected, configured and validated with the Docker Compose stack running remotely.  
+**Depends on**: Phase 7  
+**Requirements**: DEPL-04  
+**Success Criteria** (what must be TRUE):
+  1. VPS provider/account is selected and documented (Hostinger or equivalent).
+  2. VPS resources are confirmed against the demo needs (CPU, RAM, disk, bandwidth and open ports).
+  3. SSH access, firewall rules and Docker/Compose are configured on the server.
+  4. The full stack starts on the VPS and public URLs/IP endpoints pass `/frontend-healthz`, `/readyz` and `/metrics`.
+  5. A remote stress proof is captured against the VPS endpoint for the final report/presentation.
 **Plans**: TBD
 
-### Phase 8: Final Report, Roles and Presentation Readiness
+### Phase 9: Final Report, Roles and Presentation Readiness
 **Goal**: The group can submit and present the project clearly, with every student able to explain their contribution.  
-**Depends on**: Phase 7  
+**Depends on**: Phase 8  
 **Requirements**: COUR-05, COUR-06  
 **Success Criteria** (what must be TRUE):
   1. Entrega 2 report expands the first report to cover failures, chosen extra requirement, results and improvements.
@@ -142,13 +158,14 @@ Plans:
 | 4. Realtime Network Pipeline | 1/1 | Done: WebSocket + server-clock snapshots (NETW-01..04), validated end-to-end | 2026-06-28 |
 | 5. Playable Voxel Battle Royale | 1/1 | Done: full playable loop, 5-minute safe zone and final ranking screen (GAME-01..08) | 2026-06-28 |
 | 6. Observability and 50-Player Stress Proof | 1/1 | Done: OpenTelemetry + Prometheus/Grafana/Jaeger + runner e smoke 50-player (NETW-05, OBSV-01..05) | 2026-06-28 |
-| 7. Fault Tolerance, Stateless Infra and VPS Deploy | 0/0 | Not started | - |
-| 8. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
+| 7. Fault Tolerance and Local Deploy Readiness | 1/1 | Done: disconnect cleanup, controlled gRPC degradation, readiness checks, frontend in Compose and deploy guide (FAIL-01..03, DEPL-01..03) | 2026-06-28 |
+| 8. VPS Provider Setup and Remote Deploy | 0/0 | Not started: needs provider/account, SSH/firewall/Docker setup and remote validation | - |
+| 9. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
 
 ## Coverage Validation
 
-All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements.
+All 41 v1 requirements are mapped to exactly one phase. No orphaned requirements.
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-28 to complete Phase 6 (observability + 50-player stress proof)*
+*Roadmap updated: 2026-06-28 to add Phase 8 (VPS provider setup + remote deploy)*

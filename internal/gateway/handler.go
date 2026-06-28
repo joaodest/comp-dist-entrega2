@@ -2,7 +2,10 @@ package gateway
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	lobbyv1 "voxel-royale/gen/lobby"
 	matchv1 "voxel-royale/gen/match"
@@ -13,9 +16,23 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func NewHealthMux() *http.ServeMux {
+type ReadinessCheck func(context.Context) error
+
+func NewHealthMux(readinessChecks ...ReadinessCheck) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		for _, check := range readinessChecks {
+			if err := check(ctx); err != nil {
+				http.Error(w, fmt.Sprintf("not ready: %v", err), http.StatusServiceUnavailable)
+				return
+			}
+		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
@@ -49,8 +66,23 @@ func NewProxyMux(ctx context.Context, gameGRPCAddr, lobbyGRPCAddr string) (http.
 	}
 	rt := &realtimeBridge{game: matchv1.NewGameServiceClient(gameConn)}
 
-	mux := NewHealthMux()
+	mux := NewHealthMux(
+		tcpReadinessCheck("game", gameGRPCAddr),
+		tcpReadinessCheck("lobby", lobbyGRPCAddr),
+	)
 	mux.HandleFunc("/v1/match/ws", rt.handleMatchWS)
 	mux.Handle("/", proxy)
 	return mux, nil
+}
+
+func tcpReadinessCheck(name, addr string) ReadinessCheck {
+	return func(ctx context.Context) error {
+		var dialer net.Dialer
+		conn, err := dialer.DialContext(ctx, "tcp", addr)
+		if err != nil {
+			return fmt.Errorf("%s grpc at %s unavailable: %w", name, addr, err)
+		}
+		_ = conn.Close()
+		return nil
+	}
 }

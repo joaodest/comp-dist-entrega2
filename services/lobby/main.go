@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	lobbyv1 "voxel-royale/gen/lobby"
 	matchv1 "voxel-royale/gen/match"
@@ -55,7 +57,8 @@ func main() {
 		log.Fatalf("lobby grpc listen failed: %v", err)
 	}
 
-	health := healthServer(healthAddr)
+	ready := &atomic.Bool{}
+	health := healthServer(healthAddr, ready, gameAddr)
 	go func() {
 		log.Printf("lobby health listening on %s", healthAddr)
 		if err := health.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -70,6 +73,7 @@ func main() {
 	}()
 
 	log.Printf("lobby grpc listening on %s (game at %s)", grpcAddr, gameAddr)
+	ready.Store(true)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("lobby grpc server failed: %v", err)
 	}
@@ -82,6 +86,9 @@ type gameMatchStarter struct {
 }
 
 func (g *gameMatchStarter) StartMatch(ctx context.Context, roomID string, maxPlayers int32, players []lobby.RosterPlayer) error {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	req := &matchv1.StartMatchRequest{
 		RoomId:     roomID,
 		MaxPlayers: maxPlayers,
@@ -97,9 +104,25 @@ func (g *gameMatchStarter) StartMatch(ctx context.Context, roomID string, maxPla
 	return err
 }
 
-func healthServer(addr string) *http.Server {
+func healthServer(addr string, ready *atomic.Bool, gameAddr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if !ready.Load() {
+			http.Error(w, "not ready", http.StatusServiceUnavailable)
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		var dialer net.Dialer
+		conn, err := dialer.DialContext(ctx, "tcp", gameAddr)
+		if err != nil {
+			http.Error(w, "game dependency not ready", http.StatusServiceUnavailable)
+			return
+		}
+		_ = conn.Close()
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/metrics", observability.MetricsHandler())

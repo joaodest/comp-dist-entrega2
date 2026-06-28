@@ -144,3 +144,40 @@ func TestRealtimeClockStopsWithoutSubscribers(t *testing.T) {
 		t.Fatal("clock should stop after the last subscriber disconnects")
 	}
 }
+
+func TestRealtimeDisconnectClearsPendingInput(t *testing.T) {
+	server := NewServer()
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := &fakeWatchStream{ctx: ctx}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- server.WatchMatch(&matchv1.WatchMatchRequest{RoomId: "room-disconnect", PlayerId: "p1"}, stream)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	if _, err := server.PushInput(ctx, &matchv1.PlayerInput{
+		PlayerId:      "p1",
+		RoomId:        "room-disconnect",
+		MoveX:         1,
+		InputSequence: 1,
+	}); err != nil {
+		t.Fatalf("PushInput failed: %v", err)
+	}
+
+	cancel()
+	<-done
+
+	server.mu.Lock()
+	match := server.matches["room-disconnect"]
+	_, hasInput := match.pendingInputs["p1"]
+	connections := match.connectedPlayers["p1"]
+	server.mu.Unlock()
+
+	if hasInput {
+		t.Fatal("pending input should be cleared after the player disconnects")
+	}
+	if connections != 0 {
+		t.Fatalf("connected player count = %d, want 0", connections)
+	}
+}

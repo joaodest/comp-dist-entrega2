@@ -17,7 +17,22 @@ services:
       lobby:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/frontend-healthz"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -35,7 +50,7 @@ services:
       - "50051"
       - "8082"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8082/healthz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8082/readyz"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -57,7 +72,7 @@ services:
       - "50052"
       - "8081"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/healthz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/readyz"]
       interval: 5s
       timeout: 3s
       retries: 10

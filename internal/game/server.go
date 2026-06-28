@@ -87,9 +87,10 @@ type matchState struct {
 	// input por jogador (consumido a cada tick do relogio do servidor); subs
 	// sao os assinantes de WatchMatch que recebem os snapshots; clockRunning
 	// indica se a goroutine do relogio esta ativa para esta partida.
-	pendingInputs map[string]*matchv1.PlayerInput
-	subs          map[*subscriber]struct{}
-	clockRunning  bool
+	pendingInputs    map[string]*matchv1.PlayerInput
+	connectedPlayers map[string]int
+	subs             map[*subscriber]struct{}
+	clockRunning     bool
 }
 
 type playerState struct {
@@ -157,6 +158,7 @@ func (s *Server) StartMatch(_ context.Context, req *matchv1.StartMatchRequest) (
 	// nenhuma segunda goroutine de relogio e iniciada.
 	if old := s.matches[roomID]; old != nil {
 		match.subs = old.subs
+		match.connectedPlayers = old.connectedPlayers
 		match.clockRunning = old.clockRunning
 	}
 	s.matches[roomID] = match
@@ -214,10 +216,11 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 
 func newMatchState() *matchState {
 	match := &matchState{
-		players:       make(map[string]*playerState),
-		chests:        make(map[string]*chestState),
-		pendingInputs: make(map[string]*matchv1.PlayerInput),
-		subs:          make(map[*subscriber]struct{}),
+		players:          make(map[string]*playerState),
+		chests:           make(map[string]*chestState),
+		pendingInputs:    make(map[string]*matchv1.PlayerInput),
+		connectedPlayers: make(map[string]int),
+		subs:             make(map[*subscriber]struct{}),
 	}
 	for i := range chestTemplates {
 		chest := chestTemplates[i]
