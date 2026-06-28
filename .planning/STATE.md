@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real no qual 50 jogadores participam de uma partida battle royale voxel com backend Go autoritativo e comunicacao entre servicos via gRPC.  
-**Current focus:** Entrega 2 — cliente web Phaser 2D (estilo .io) jogável ligado ao Gateway. (Entrega 1 fechada; faltam só os nomes reais dos alunos.)
+**Current focus:** Entrega 2 — Fase 2 iniciada com sistema de desenvolvimento em equipe, ownership e regras de contribuição. (Entrega 1 funcional; faltam nomes reais dos alunos.)
 
 ## Current Position
 
-**Phase:** 1  
-**Plan:** 01-01..01-05 executed  
-**Status:** Distributed skeleton implemented/tested; Entrega 1 docs (messages, roles) and SBC report draft (entrega1.pdf, 4 páginas) gerados. Faltam apenas os nomes reais dos alunos.  
-**Progress:** ██░░░░░░░░ ~18%
+**Phase:** 2  
+**Plan:** 01-01..01-05 executed; 02-01 by-design development system added  
+**Status:** Distributed skeleton implemented/tested; Phaser MVP builds; Phase 2 docs now define contribution flow, service boundaries, ownership, contract process and validation rules. Faltam nomes reais dos alunos para ownership nominal.  
+**Progress:** ██░░░░░░░░ ~22%
 
 ## Performance Metrics
 
@@ -20,7 +20,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Requirements mapped: 40
 - Phases total: 8
 - Phase 1 plans complete: 5/5 (01-05 done; report draft com nomes a preencher)
-- Current delivery target: Entrega 1
+- Phase 2 plans started: 1/1 documentation pass done (`ARCH-06`)
+- Current delivery target: Entrega 2
 
 ## Accumulated Context
 
@@ -42,6 +43,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Cliente web implementado em `frontend/` (Phaser 3 + TypeScript + Vite), estilo .io top-down (mapa grama/rio/árvores/pedras, jogador controlável, render do `GameState`). MVP adiantado em relação ao roadmap — valida a direção de arte e o caminho Navegador→Gateway→Game. Modo AO VIVO (`POST /v1/match/stream`) com fallback OFFLINE (mock).
 - `playerId` do cliente é único por sessão (evita colisão de identidade e input `stale`, já que o servidor guarda o último `inputSequence` por jogador).
 - Backend: `GameService.StreamMatch` agora **auto-reinicia** o match quando ele termina. Antes, o match global encerrado (tick ≥ 300) fazia o servidor ignorar todo input e travar para todos.
+- Fase 2 iniciada/consolidada: `CONTRIBUTING.md` define checklist de PR e validações; `docs/team-development.md` define fronteiras dos serviços, ownership, processo de contrato, testes e divisão de tarefas; `docs/roles.md` foi expandido com ownership de frontend, observabilidade, carga e deploy.
 
 ### Todos
 
@@ -51,7 +53,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Validate Hostinger VPS resources before deploy phase.
 - Connect `Lobby.StartRoom` to the Game service for match start.
 - Add request correlation/logging across services (request_id, room_id, player_id).
-- Plan Phase 2 from the roadmap once Entrega 1 report is closed.
+- Use the Phase 2 guide as gate for upcoming work: every task should name requirement, owner, contract impact, validation and docs affected.
 - **[ABERTO] Refactor de tempo real (Fase 4):** o `StreamMatch` avança 1 tick por request (modelo unário), então a partida atinge `maxMatchTicks` (300) em ~27s e auto-reinicia (zona/mundo resetam). Trocar para o servidor avançar ticks no **próprio relógio** + transporte **WebSocket** (snapshots em tempo real, desacoplados do request). Fix temporário já aplicado: auto-restart do match encerrado para não travar o input.
 
 ### Blockers
@@ -61,18 +63,18 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 ## Session Continuity
 
 Phase 1 is functionally implemented (Gateway, Lobby, Game build and pass tests; Docker Compose with healthchecks)
-and now documented: `docs/architecture.md`, `docs/messages.md`, `docs/roles.md` e o relatório SBC draft
-(`docs/report/entrega1.tex` → `entrega1.pdf`, 4 páginas). Plan 01-05 concluído. O único pendente da Fase 1 é
-preencher os nomes reais dos alunos (`PLACEHOLDER`).
+and documented: `docs/architecture.md`, `docs/messages.md`, `docs/roles.md` e o relatório SBC draft.
+Phase 2 has started with `CONTRIBUTING.md` and `docs/team-development.md`, plus expanded ownership in `docs/roles.md`.
+O pendente administrativo ainda é preencher os nomes reais dos alunos (`PLACEHOLDER`).
 
 Next recommended command:
 
 ```text
-$gsd-plan-phase 2            # Team Development System (by-design guide para 9 alunos)
+Fill student names in docs/roles.md and docs/report/entrega1.tex, then start Phase 3 planning.
 ```
 
-Antes da Fase 2, vale reconciliar o ROADMAP: o ready-state do Lobby (LOBB-03, escopo da Fase 3) já foi
-implementado na Fase 1.
+Antes da Fase 3, vale reconciliar o ROADMAP: o ready-state do Lobby (LOBB-03, escopo da Fase 3) já foi
+implementado na Fase 1, mas ainda falta UI de lobby/QR Code e integração Lobby -> Game.
 
 ---
-*State updated: 2026-06-27 — cliente Phaser .io (MVP jogável, AO VIVO/OFFLINE) + fix de auto-restart do match. TODO aberto: refactor de tempo real (relógio do servidor + WebSocket, Fase 4).*
+*State updated: 2026-06-27 — Fase 2 iniciada com sistema by-design de desenvolvimento em equipe. TODO aberto: preencher nomes reais e refactor de tempo real (relógio do servidor + WebSocket, Fase 4).*

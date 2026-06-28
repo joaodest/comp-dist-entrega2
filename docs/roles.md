@@ -4,6 +4,9 @@ O grupo tem **9 alunos**, organizados em **3 squads** por fatia funcional do sis
 distribuído (não por camada de ferramenta). Não há squad "só de documentação": cada squad
 escreve a seção do relatório correspondente ao que implementou.
 
+O guia operacional da Fase 2 fica em `docs/team-development.md`; o checklist curto
+para PRs fica em `CONTRIBUTING.md`.
+
 > **Como preencher:** substitua cada `PLACEHOLDER` pelo nome do aluno e marque o owner de
 > cada squad (responsável por revisar PRs e contratos da fatia). Mantenha esta tabela
 > sincronizada com a seção "Papéis dos alunos" do relatório (`docs/report/entrega1.tex`).
@@ -56,14 +59,18 @@ Seção do relatório: **Problema** + **Desafios** + consolidação/edição fin
 
 ## Mapa de ownership por componente
 
-| Componente | Squad responsável |
-| --- | --- |
-| Gateway (HTTP edge) | B |
-| Lobby (salas) | A |
-| Game (partida) | A |
-| Contratos `.proto` / `gen/` | B |
-| Docker Compose / Dockerfiles | C |
-| Relatório SBC | C (consolida; cada squad escreve sua seção) |
+| Componente | Squad responsável | Observação |
+| --- | --- | --- |
+| Gateway (HTTP edge) | B | Rotas HTTP, grpc-gateway, config e futura borda WebSocket. |
+| Lobby (salas) | A | Ciclo de sala, ready state, ownership e integração futura com Game. |
+| Game (partida) | A | Estado autoritativo, gameplay, armas, safe zone e ranking. |
+| Contratos `.proto` / `gen/` | B | Fonte em `proto/`; `gen/` é gerado e não deve ser editado manualmente. |
+| Frontend Phaser | A + B | A valida fluxo de jogo/lobby; B valida aderência aos contratos HTTP/JSON. |
+| Observabilidade | B + C | B instrumenta entrada/contratos; C monta dashboards e evidências. |
+| Simulador de carga 50 jogadores | A + C | A define comportamento esperado; C automatiza execução e coleta resultados. |
+| Docker Compose / Dockerfiles | C | Build, portas, env vars e healthchecks. |
+| Deploy VPS / runbook | C | Instruções reprodutíveis, validação e rollback básico. |
+| Relatório SBC | C (consolida; cada squad escreve sua seção) | Cada squad documenta a parte que implementou. |
 
 ---
 
@@ -73,4 +80,24 @@ Qualquer alteração em `proto/lobby/v1` ou `proto/match/v1` (que afeta todas as
 
 1. PR no `.proto` com descrição do impacto e quem consome.
 2. Aprovação do owner do Squad B (dono dos contratos) **e** do owner da squad afetada.
-3. Regerar `gen/` (`make proto`) e rodar `go test ./...` antes do merge.
+3. Atualização de `docs/messages.md` com a rota/RPC/campo novo ou alterado.
+4. Regerar `gen/` (`make proto`) no mesmo PR.
+5. Rodar `go test ./...` antes do merge.
+6. Se o frontend consumir o contrato, rodar `npm --prefix frontend run build`.
+
+## Processo de mudança de comportamento
+
+Mudanças que alteram regra de negócio, mesmo sem mexer em `.proto`, devem seguir
+o mesmo raciocínio:
+
+1. Identificar o requisito do roadmap afetado.
+2. Atualizar ou adicionar teste no pacote dono da regra.
+3. Atualizar documentação quando o comportamento for visível para outro squad.
+4. Pedir review do owner do componente e de qualquer squad consumidora.
+
+Exemplos:
+
+- regra de dano, arma ou safe zone: Squad A revisa;
+- rota HTTP, JSON ou proxy: Squad B revisa;
+- Compose, healthcheck ou comando de demo: Squad C revisa;
+- WebSocket futuro: Squad B revisa o contrato de rede e Squad A valida impacto no jogo.

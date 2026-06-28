@@ -23,7 +23,7 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 - [ ] **ARCH-03**: Contratos `.proto` definem as mensagens gRPC principais entre servicos.
 - [ ] **ARCH-04**: Servicos publicos expõem web services HTTP para criacao/entrada/status de sala e healthchecks.
 - [ ] **ARCH-05**: Arquitetura documenta quem troca mensagem com quem, o conteudo das principais mensagens e o papel de cada entidade.
-- [ ] **ARCH-06**: Padrao by-design define estrutura de pastas, ownership, contratos, testes e regras para contribuicao dos 9 alunos.
+- [x] **ARCH-06**: Padrao by-design define estrutura de pastas, ownership, contratos, testes e regras para contribuicao dos 9 alunos.
 
 ### Lobby and Session
 
@@ -113,7 +113,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-03 | Phase 1 | Pending |
 | ARCH-04 | Phase 1 | Pending |
 | ARCH-05 | Phase 1 | Pending |
-| ARCH-06 | Phase 2 | Pending |
+| ARCH-06 | Phase 2 | Done (`CONTRIBUTING.md`, `docs/team-development.md`, `docs/roles.md`) |
 | LOBB-01 | Phase 3 | Pending |
 | LOBB-02 | Phase 3 | Pending |
 | LOBB-03 | Phase 3 | Pending |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 after roadmap creation*
+*Last updated: 2026-06-27 after Phase 2 by-design documentation*

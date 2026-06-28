@@ -94,6 +94,8 @@ curl -X POST http://localhost:8080/v1/match/stream \
 
 - [Architecture update](docs/architecture.md): arquitetura implementada em relacao ao plano original.
 - [Implementation delta](docs/implementation-delta.md): checklist do que foi feito, desvios e gaps restantes.
+- [Team development](docs/team-development.md): guia by-design da Fase 2 para ownership, contratos, testes e reviews.
+- [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
 
 ## Frontend / Cliente (Phaser 2D)
 

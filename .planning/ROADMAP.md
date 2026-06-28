@@ -45,7 +45,10 @@ Plans:
   2. Each service has clear ownership and boundaries that students can explain.
   3. Shared `.proto` and HTTP contracts have a documented change process.
   4. Tasks can be split across backend, frontend, observability, load testing and report groups.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 02-01 — Add the by-design development system: contribution checklist, service boundaries, ownership map, contract process, testing expectations and task split for the 9-student team. (`CONTRIBUTING.md`, `docs/team-development.md`, `docs/roles.md`; student names still need to replace `PLACEHOLDER`)
 
 ### Phase 3: QR Lobby and Match Start
 **Goal**: Players can enter a room through QR Code, appear in a lobby and start a match.  
@@ -122,7 +125,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Entrega 1 Distributed Skeleton | 5/5 | Code + docs/report draft done (faltam nomes reais dos alunos) | - |
-| 2. Team Development System | 0/0 | Not started | - |
+| 2. Team Development System | 1/1 | Started: by-design guide and contribution rules added; nominal student roster still pending | 2026-06-27 |
 | 3. QR Lobby and Match Start | 0/0 | Not started | - |
 | 4. Realtime Network Pipeline | 0/0 | Not started | - |
 | 5. Playable Voxel Battle Royale | 0/0 | Not started | - |
@@ -136,4 +139,4 @@ All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-26 to reflect Phase 1 implementation (plans 01-01..01-04 done, 01-05 partial)*
+*Roadmap updated: 2026-06-27 to start Phase 2 with by-design development docs and contribution workflow*
