@@ -1,7 +1,7 @@
 # Referência de Mensagens — Voxel Royale Distribuído
 
-Documenta os contratos **realmente implementados** na Fase 1 (Entrega 1): as rotas
-HTTP públicas expostas pelo Gateway e os métodos gRPC do Lobby e do Game.
+Documenta os contratos **realmente implementados**: as rotas HTTP públicas e o
+WebSocket de tempo real expostos pelo Gateway, e os métodos gRPC do Lobby e do Game.
 
 Fontes de verdade:
 
@@ -47,6 +47,20 @@ Navegador / curl
 > prontos), o Lobby chama `Game.StartMatch` via gRPC, criando uma partida
 > vinculada ao `room_id`. O input do cliente passa a carregar `room_id` para
 > rotear para a partida correta.
+>
+> **Fase 4 (tempo real):** durante a partida o navegador mantém um **WebSocket**
+> com o Gateway (`/v1/match/ws`). O Gateway traduz a sessão em duas RPCs gRPC
+> internas do Game: `PushInput` (cada input do cliente) e `WatchMatch` (stream de
+> snapshots publicados pelo **relógio do servidor**). O Gateway faz o *fan-out*
+> dos snapshots para todos os WebSockets conectados àquela sala.
+
+```text
+Navegador ──WebSocket /v1/match/ws──► Gateway :8080
+   ▲                                     │  gRPC PushInput(PlayerInput)
+   │                                     ▼
+   │                                  Game :50051  (relógio ~15 Hz, autoritativo)
+   └──────WebSocket (snapshots)◄── Gateway ◄──gRPC stream WatchMatch(GameState)
+```
 
 ---
 
@@ -189,14 +203,18 @@ curl -X POST http://localhost:8080/v1/rooms/room-1/ready \
 
 ## 3. GameService — partida autoritativa
 
-Serviço gRPC `match.GameService` (`proto/match/v1/match.proto`). Dois RPCs:
-`StreamMatch` (recebe input, devolve o snapshot completo) e `StartMatch` (interno,
-chamado pelo Lobby para criar a partida de uma sala). O servidor é autoritativo:
-valida o input, avança um tick e calcula o estado.
+Serviço gRPC `match.GameService` (`proto/match/v1/match.proto`). Quatro RPCs:
 
-> O nome `StreamMatch` é histórico (reaproveitado da branch restaurada). Apesar do nome, no
-> momento é uma chamada unária request/response, não um stream gRPC. O transporte WebSocket
-> em tempo real fica para a Fase 4.
+- `StreamMatch` — unário request/response (legado da Fase 1; demo via `curl`).
+- `StartMatch` — interno, chamado pelo Lobby para criar a partida de uma sala.
+- `PushInput` — interno, encaminha um input do cliente (Fase 4, NETW-03).
+- `WatchMatch` — interno, *stream* de snapshots do relógio do servidor (Fase 4, NETW-04).
+
+O servidor é autoritativo: valida o input, avança o tick e calcula o estado.
+
+> O nome `StreamMatch` é histórico (reaproveitado da branch restaurada). Ele continua
+> unário (1 tick por requisição) e serve para demonstração/compatibilidade. O fluxo de
+> tempo real da Fase 4 usa `PushInput` + `WatchMatch` sob o WebSocket do Gateway.
 
 ### 3.1 `StreamMatch` — `POST /v1/match/stream`
 
@@ -247,6 +265,39 @@ Request `StartMatchRequest`
 
 Response `StartMatchResponse`: `matchId` (= `roomId`) e `started` (bool).
 
+### 3.3 `PushInput` — gRPC interno (Gateway → Game)
+
+Encaminha um `PlayerInput` (mesmo formato do `StreamMatch`) para o **buffer** da
+partida. O input não é aplicado na hora: o relógio do servidor o consome no
+próximo tick. O último input por jogador vence. Resposta `InputAck` com
+`accepted` (bool) e `appliedSequence` (int64, ecoa o `inputSequence`) para apoiar
+a reconciliação no cliente.
+
+### 3.4 `WatchMatch` — gRPC interno em *stream* (Game → Gateway)
+
+`rpc WatchMatch(WatchMatchRequest) returns (stream GameState)`. O Gateway abre um
+stream por WebSocket conectado; o Game envia um `GameState` por tick (relógio
+~15 Hz). `WatchMatchRequest` traz `roomId` e `playerId` (o jogador aparece na
+partida assim que abre o WebSocket, mesmo antes do primeiro input). O relógio da
+partida é iniciado sob demanda no primeiro assinante e parado quando o último sai.
+
+### 3.5 WebSocket público — `GET /v1/match/ws?room={roomId}&player={playerId}`
+
+Endpoint de tempo real exposto pelo Gateway (não passa pelo grpc-gateway; é um
+handler WebSocket dedicado em `internal/gateway/realtime.go`).
+
+- **Cliente → Gateway:** mensagens de texto JSON com um `PlayerInput`
+  (`playerId`/`roomId` são reescritos pelo Gateway a partir da query, por
+  autoridade). Cada mensagem vira um `PushInput` gRPC.
+- **Gateway → Cliente:** mensagens de texto JSON com um `GameState` por tick,
+  no mesmo formato camelCase dos web services. Pings periódicos mantêm a conexão.
+
+```bash
+# Exemplo com websocat (ou o WebSocket nativo do navegador):
+websocat 'ws://localhost:8080/v1/match/ws?room=room-1&player=player-1'
+# enviar: {"moveX":1,"moveY":0,"inputSequence":1}
+```
+
 ### Constantes de gameplay (`internal/game/server.go`)
 
 | Parâmetro | Valor | Observação |
@@ -264,9 +315,20 @@ Response `StartMatchResponse`: `matchId` (= `roomId`) e `started` (bool).
 
 ## Itens adiados (próximas fases)
 
-- Transporte WebSocket de inputs/snapshots em tempo real (Fase 4).
 - Logs correlacionados (`request_id`, `room_id`, `player_id`) entre serviços.
 - Tela de fim de partida com ranking no cliente (Fase 5).
+- Reconexão robusta e tratamento de desconexão sem afetar a partida (Fase 7).
+
+## Implementado na Fase 4
+
+- WebSocket `/v1/match/ws` no Gateway, mantido durante toda a partida (NETW-01).
+- Cliente envia inputs sequenciados pelo WebSocket (NETW-02); o Gateway os
+  encaminha ao Game via `PushInput` gRPC (NETW-03).
+- Game roda um **relógio de servidor** (~15 Hz) por sala, desacoplado do ritmo
+  dos clientes, e publica snapshots via `WatchMatch` que o Gateway distribui
+  aos WebSockets (NETW-04). Removeu-se a dependência do auto-restart unário.
+- Cliente Phaser passou a um modelo *push* (WebSocket) com interpolação dos
+  jogadores remotos e fallback offline (mock) quando o backend não responde.
 
 ## Implementado na Fase 3
 

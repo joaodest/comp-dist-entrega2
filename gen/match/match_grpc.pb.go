@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	GameService_StreamMatch_FullMethodName = "/match.GameService/StreamMatch"
 	GameService_StartMatch_FullMethodName  = "/match.GameService/StartMatch"
+	GameService_PushInput_FullMethodName   = "/match.GameService/PushInput"
+	GameService_WatchMatch_FullMethodName  = "/match.GameService/WatchMatch"
 )
 
 // GameServiceClient is the client API for GameService service.
@@ -32,6 +34,13 @@ type GameServiceClient interface {
 	// criar/recriar uma partida vinculada a uma sala. Sem anotacao HTTP: nao e
 	// exposto pelo Gateway.
 	StartMatch(ctx context.Context, in *StartMatchRequest, opts ...grpc.CallOption) (*StartMatchResponse, error)
+	// Pipeline de tempo real (Fase 4). O Gateway mantem um WebSocket por jogador
+	// e traduz a sessao para estas RPCs gRPC internas (sem anotacao HTTP):
+	//   - PushInput: encaminha cada input do cliente para o buffer da partida.
+	//   - WatchMatch: assina os snapshots que o relogio do servidor publica e que
+	//     o Gateway distribui ("fan-out") aos clientes conectados.
+	PushInput(ctx context.Context, in *PlayerInput, opts ...grpc.CallOption) (*InputAck, error)
+	WatchMatch(ctx context.Context, in *WatchMatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GameState], error)
 }
 
 type gameServiceClient struct {
@@ -62,6 +71,35 @@ func (c *gameServiceClient) StartMatch(ctx context.Context, in *StartMatchReques
 	return out, nil
 }
 
+func (c *gameServiceClient) PushInput(ctx context.Context, in *PlayerInput, opts ...grpc.CallOption) (*InputAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InputAck)
+	err := c.cc.Invoke(ctx, GameService_PushInput_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gameServiceClient) WatchMatch(ctx context.Context, in *WatchMatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GameState], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &GameService_ServiceDesc.Streams[0], GameService_WatchMatch_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[WatchMatchRequest, GameState]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type GameService_WatchMatchClient = grpc.ServerStreamingClient[GameState]
+
 // GameServiceServer is the server API for GameService service.
 // All implementations must embed UnimplementedGameServiceServer
 // for forward compatibility.
@@ -71,6 +109,13 @@ type GameServiceServer interface {
 	// criar/recriar uma partida vinculada a uma sala. Sem anotacao HTTP: nao e
 	// exposto pelo Gateway.
 	StartMatch(context.Context, *StartMatchRequest) (*StartMatchResponse, error)
+	// Pipeline de tempo real (Fase 4). O Gateway mantem um WebSocket por jogador
+	// e traduz a sessao para estas RPCs gRPC internas (sem anotacao HTTP):
+	//   - PushInput: encaminha cada input do cliente para o buffer da partida.
+	//   - WatchMatch: assina os snapshots que o relogio do servidor publica e que
+	//     o Gateway distribui ("fan-out") aos clientes conectados.
+	PushInput(context.Context, *PlayerInput) (*InputAck, error)
+	WatchMatch(*WatchMatchRequest, grpc.ServerStreamingServer[GameState]) error
 	mustEmbedUnimplementedGameServiceServer()
 }
 
@@ -86,6 +131,12 @@ func (UnimplementedGameServiceServer) StreamMatch(context.Context, *PlayerInput)
 }
 func (UnimplementedGameServiceServer) StartMatch(context.Context, *StartMatchRequest) (*StartMatchResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StartMatch not implemented")
+}
+func (UnimplementedGameServiceServer) PushInput(context.Context, *PlayerInput) (*InputAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method PushInput not implemented")
+}
+func (UnimplementedGameServiceServer) WatchMatch(*WatchMatchRequest, grpc.ServerStreamingServer[GameState]) error {
+	return status.Error(codes.Unimplemented, "method WatchMatch not implemented")
 }
 func (UnimplementedGameServiceServer) mustEmbedUnimplementedGameServiceServer() {}
 func (UnimplementedGameServiceServer) testEmbeddedByValue()                     {}
@@ -144,6 +195,35 @@ func _GameService_StartMatch_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GameService_PushInput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PlayerInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServiceServer).PushInput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GameService_PushInput_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServiceServer).PushInput(ctx, req.(*PlayerInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GameService_WatchMatch_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchMatchRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(GameServiceServer).WatchMatch(m, &grpc.GenericServerStream[WatchMatchRequest, GameState]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type GameService_WatchMatchServer = grpc.ServerStreamingServer[GameState]
+
 // GameService_ServiceDesc is the grpc.ServiceDesc for GameService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -159,7 +239,17 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "StartMatch",
 			Handler:    _GameService_StartMatch_Handler,
 		},
+		{
+			MethodName: "PushInput",
+			Handler:    _GameService_PushInput_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "WatchMatch",
+			Handler:       _GameService_WatchMatch_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "match/v1/match.proto",
 }

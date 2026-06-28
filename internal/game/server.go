@@ -82,6 +82,14 @@ type matchState struct {
 	chests     map[string]*chestState
 	chestIDs   []string
 	matchEnded bool
+
+	// Estado do pipeline de tempo real (Fase 4). pendingInputs guarda o ultimo
+	// input por jogador (consumido a cada tick do relogio do servidor); subs
+	// sao os assinantes de WatchMatch que recebem os snapshots; clockRunning
+	// indica se a goroutine do relogio esta ativa para esta partida.
+	pendingInputs map[string]*matchv1.PlayerInput
+	subs          map[*subscriber]struct{}
+	clockRunning  bool
 }
 
 type playerState struct {
@@ -143,6 +151,14 @@ func (s *Server) StartMatch(_ context.Context, req *matchv1.StartMatchRequest) (
 			match.ensurePlayer(id)
 		}
 	}
+	// Se a sala ja tinha uma partida com assinantes/relogio ativos (ex.: reinicio
+	// de partida), transfere-os para a nova: o relogio existente passa a dirigir
+	// a partida recriada (runClock resolve a partida pela chave a cada tick) e
+	// nenhuma segunda goroutine de relogio e iniciada.
+	if old := s.matches[roomID]; old != nil {
+		match.subs = old.subs
+		match.clockRunning = old.clockRunning
+	}
 	s.matches[roomID] = match
 
 	return &matchv1.StartMatchResponse{MatchId: roomID, Started: true}, nil
@@ -197,8 +213,10 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 
 func newMatchState() *matchState {
 	match := &matchState{
-		players: make(map[string]*playerState),
-		chests:  make(map[string]*chestState),
+		players:       make(map[string]*playerState),
+		chests:        make(map[string]*chestState),
+		pendingInputs: make(map[string]*matchv1.PlayerInput),
+		subs:          make(map[*subscriber]struct{}),
 	}
 	for i := range chestTemplates {
 		chest := chestTemplates[i]

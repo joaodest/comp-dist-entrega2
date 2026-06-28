@@ -34,10 +34,10 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Realtime Networking
 
-- [ ] **NETW-01**: Cliente mantem conexao WebSocket com o Gateway durante a partida.
-- [ ] **NETW-02**: Cliente envia inputs de movimento e acoes com sequencia/timestamp suficiente para reconciliacao.
-- [ ] **NETW-03**: Gateway encaminha inputs ao Game service via gRPC.
-- [ ] **NETW-04**: Game service envia snapshots de estado para o Gateway distribuir aos clientes.
+- [x] **NETW-01**: Cliente mantem conexao WebSocket com o Gateway durante a partida.
+- [x] **NETW-02**: Cliente envia inputs de movimento e acoes com sequencia/timestamp suficiente para reconciliacao.
+- [x] **NETW-03**: Gateway encaminha inputs ao Game service via gRPC.
+- [x] **NETW-04**: Game service envia snapshots de estado para o Gateway distribuir aos clientes.
 - [ ] **NETW-05**: Sistema suporta ate 50 jogadores simultaneos em uma partida real ou simulada.
 
 ### Gameplay
@@ -118,10 +118,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOBB-02 | Phase 3 | Done (entrar por `?room=` + nome) |
 | LOBB-03 | Phase 3 | Done (lista de jogadores + ready/waiting) |
 | LOBB-04 | Phase 3 | Partial (start manual + auto-start; sem limite de tempo) |
-| NETW-01 | Phase 4 | Pending |
-| NETW-02 | Phase 4 | Pending |
-| NETW-03 | Phase 4 | Pending |
-| NETW-04 | Phase 4 | Pending |
+| NETW-01 | Phase 4 | Done (WebSocket `/v1/match/ws` mantido na partida) |
+| NETW-02 | Phase 4 | Done (inputs sequenciados pelo WebSocket) |
+| NETW-03 | Phase 4 | Done (Gateway → Game via gRPC `PushInput`) |
+| NETW-04 | Phase 4 | Done (Game `WatchMatch` stream + fan-out do Gateway) |
 | NETW-05 | Phase 6 | Pending |
 | GAME-01 | Phase 5 | Pending |
 | GAME-02 | Phase 5 | Pending |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-06-27 after Phase 3 (QR lobby + Lobby→Game match start)*
+*Last updated: 2026-06-28 after Phase 4 (realtime pipeline: WebSocket + server clock; NETW-01..04 done)*

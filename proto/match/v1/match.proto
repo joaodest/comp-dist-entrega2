@@ -18,6 +18,14 @@ service GameService {
   // criar/recriar uma partida vinculada a uma sala. Sem anotacao HTTP: nao e
   // exposto pelo Gateway.
   rpc StartMatch(StartMatchRequest) returns (StartMatchResponse);
+
+  // Pipeline de tempo real (Fase 4). O Gateway mantem um WebSocket por jogador
+  // e traduz a sessao para estas RPCs gRPC internas (sem anotacao HTTP):
+  //  - PushInput: encaminha cada input do cliente para o buffer da partida.
+  //  - WatchMatch: assina os snapshots que o relogio do servidor publica e que
+  //    o Gateway distribui ("fan-out") aos clientes conectados.
+  rpc PushInput(PlayerInput) returns (InputAck);
+  rpc WatchMatch(WatchMatchRequest) returns (stream GameState);
 }
 
 message PlayerInput {
@@ -49,6 +57,21 @@ message StartMatchRequest {
 message StartMatchResponse {
   string match_id = 1;
   bool started = 2;
+}
+
+// InputAck confirma o recebimento de um input no pipeline de tempo real.
+// applied_sequence ecoa o input_sequence aceito para apoiar a reconciliacao.
+message InputAck {
+  bool accepted = 1;
+  int64 applied_sequence = 2;
+}
+
+// WatchMatchRequest assina o stream de snapshots de uma sala. player_id permite
+// que o jogador apareca na partida assim que abre o WebSocket, mesmo antes do
+// primeiro input.
+message WatchMatchRequest {
+  string room_id = 1;
+  string player_id = 2;
 }
 
 message GameState {

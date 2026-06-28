@@ -21,6 +21,10 @@ func NewHealthMux() *http.ServeMux {
 	return mux
 }
 
+// NewProxyMux monta o roteador HTTP do Gateway: web services REST (grpc-gateway
+// para Lobby e Game), o healthcheck e o endpoint WebSocket de tempo real
+// (/v1/match/ws), que liga a sessao do navegador as RPCs gRPC PushInput e
+// WatchMatch do Game (Fase 4).
 func NewProxyMux(ctx context.Context, gameGRPCAddr, lobbyGRPCAddr string) (http.Handler, error) {
 	proxy := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
@@ -32,7 +36,16 @@ func NewProxyMux(ctx context.Context, gameGRPCAddr, lobbyGRPCAddr string) (http.
 		return nil, err
 	}
 
+	// Conexao gRPC dedicada ao Game para o pipeline de tempo real (WebSocket).
+	// E separada do proxy REST para manter o transporte realtime desacoplado.
+	gameConn, err := grpc.NewClient(gameGRPCAddr, opts...)
+	if err != nil {
+		return nil, err
+	}
+	rt := &realtimeBridge{game: matchv1.NewGameServiceClient(gameConn)}
+
 	mux := NewHealthMux()
+	mux.HandleFunc("/v1/match/ws", rt.handleMatchWS)
 	mux.Handle("/", proxy)
 	return mux, nil
 }

@@ -304,6 +304,115 @@ func (x *StartMatchResponse) GetStarted() bool {
 	return false
 }
 
+// InputAck confirma o recebimento de um input no pipeline de tempo real.
+// applied_sequence ecoa o input_sequence aceito para apoiar a reconciliacao.
+type InputAck struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Accepted        bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	AppliedSequence int64                  `protobuf:"varint,2,opt,name=applied_sequence,json=appliedSequence,proto3" json:"applied_sequence,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *InputAck) Reset() {
+	*x = InputAck{}
+	mi := &file_match_v1_match_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InputAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InputAck) ProtoMessage() {}
+
+func (x *InputAck) ProtoReflect() protoreflect.Message {
+	mi := &file_match_v1_match_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InputAck.ProtoReflect.Descriptor instead.
+func (*InputAck) Descriptor() ([]byte, []int) {
+	return file_match_v1_match_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InputAck) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *InputAck) GetAppliedSequence() int64 {
+	if x != nil {
+		return x.AppliedSequence
+	}
+	return 0
+}
+
+// WatchMatchRequest assina o stream de snapshots de uma sala. player_id permite
+// que o jogador apareca na partida assim que abre o WebSocket, mesmo antes do
+// primeiro input.
+type WatchMatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoomId        string                 `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	PlayerId      string                 `protobuf:"bytes,2,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchMatchRequest) Reset() {
+	*x = WatchMatchRequest{}
+	mi := &file_match_v1_match_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchMatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchMatchRequest) ProtoMessage() {}
+
+func (x *WatchMatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_match_v1_match_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchMatchRequest.ProtoReflect.Descriptor instead.
+func (*WatchMatchRequest) Descriptor() ([]byte, []int) {
+	return file_match_v1_match_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WatchMatchRequest) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *WatchMatchRequest) GetPlayerId() string {
+	if x != nil {
+		return x.PlayerId
+	}
+	return ""
+}
+
 type GameState struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Tick           int64                  `protobuf:"varint,1,opt,name=tick,proto3" json:"tick,omitempty"`
@@ -319,7 +428,7 @@ type GameState struct {
 
 func (x *GameState) Reset() {
 	*x = GameState{}
-	mi := &file_match_v1_match_proto_msgTypes[4]
+	mi := &file_match_v1_match_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -331,7 +440,7 @@ func (x *GameState) String() string {
 func (*GameState) ProtoMessage() {}
 
 func (x *GameState) ProtoReflect() protoreflect.Message {
-	mi := &file_match_v1_match_proto_msgTypes[4]
+	mi := &file_match_v1_match_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +453,7 @@ func (x *GameState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameState.ProtoReflect.Descriptor instead.
 func (*GameState) Descriptor() ([]byte, []int) {
-	return file_match_v1_match_proto_rawDescGZIP(), []int{4}
+	return file_match_v1_match_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GameState) GetTick() int64 {
@@ -414,7 +523,7 @@ type PlayerSnapshot struct {
 
 func (x *PlayerSnapshot) Reset() {
 	*x = PlayerSnapshot{}
-	mi := &file_match_v1_match_proto_msgTypes[5]
+	mi := &file_match_v1_match_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +535,7 @@ func (x *PlayerSnapshot) String() string {
 func (*PlayerSnapshot) ProtoMessage() {}
 
 func (x *PlayerSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_match_v1_match_proto_msgTypes[5]
+	mi := &file_match_v1_match_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +548,7 @@ func (x *PlayerSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerSnapshot.ProtoReflect.Descriptor instead.
 func (*PlayerSnapshot) Descriptor() ([]byte, []int) {
-	return file_match_v1_match_proto_rawDescGZIP(), []int{5}
+	return file_match_v1_match_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PlayerSnapshot) GetPlayerId() string {
@@ -526,7 +635,7 @@ type ChestSnapshot struct {
 
 func (x *ChestSnapshot) Reset() {
 	*x = ChestSnapshot{}
-	mi := &file_match_v1_match_proto_msgTypes[6]
+	mi := &file_match_v1_match_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +647,7 @@ func (x *ChestSnapshot) String() string {
 func (*ChestSnapshot) ProtoMessage() {}
 
 func (x *ChestSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_match_v1_match_proto_msgTypes[6]
+	mi := &file_match_v1_match_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +660,7 @@ func (x *ChestSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChestSnapshot.ProtoReflect.Descriptor instead.
 func (*ChestSnapshot) Descriptor() ([]byte, []int) {
-	return file_match_v1_match_proto_rawDescGZIP(), []int{6}
+	return file_match_v1_match_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ChestSnapshot) GetChestId() string {
@@ -608,7 +717,7 @@ type SafeZoneSnapshot struct {
 
 func (x *SafeZoneSnapshot) Reset() {
 	*x = SafeZoneSnapshot{}
-	mi := &file_match_v1_match_proto_msgTypes[7]
+	mi := &file_match_v1_match_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +729,7 @@ func (x *SafeZoneSnapshot) String() string {
 func (*SafeZoneSnapshot) ProtoMessage() {}
 
 func (x *SafeZoneSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_match_v1_match_proto_msgTypes[7]
+	mi := &file_match_v1_match_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +742,7 @@ func (x *SafeZoneSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SafeZoneSnapshot.ProtoReflect.Descriptor instead.
 func (*SafeZoneSnapshot) Descriptor() ([]byte, []int) {
-	return file_match_v1_match_proto_rawDescGZIP(), []int{7}
+	return file_match_v1_match_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SafeZoneSnapshot) GetCenterX() float32 {
@@ -679,7 +788,7 @@ type RankingEntry struct {
 
 func (x *RankingEntry) Reset() {
 	*x = RankingEntry{}
-	mi := &file_match_v1_match_proto_msgTypes[8]
+	mi := &file_match_v1_match_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -691,7 +800,7 @@ func (x *RankingEntry) String() string {
 func (*RankingEntry) ProtoMessage() {}
 
 func (x *RankingEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_match_v1_match_proto_msgTypes[8]
+	mi := &file_match_v1_match_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +813,7 @@ func (x *RankingEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RankingEntry.ProtoReflect.Descriptor instead.
 func (*RankingEntry) Descriptor() ([]byte, []int) {
-	return file_match_v1_match_proto_rawDescGZIP(), []int{8}
+	return file_match_v1_match_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RankingEntry) GetPlayerId() string {
@@ -785,7 +894,13 @@ const file_match_v1_match_proto_rawDesc = "" +
 	"maxPlayers\"I\n" +
 	"\x12StartMatchResponse\x12\x19\n" +
 	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x18\n" +
-	"\astarted\x18\x02 \x01(\bR\astarted\"\xad\x02\n" +
+	"\astarted\x18\x02 \x01(\bR\astarted\"Q\n" +
+	"\bInputAck\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12)\n" +
+	"\x10applied_sequence\x18\x02 \x01(\x03R\x0fappliedSequence\"I\n" +
+	"\x11WatchMatchRequest\x12\x17\n" +
+	"\aroom_id\x18\x01 \x01(\tR\x06roomId\x12\x1b\n" +
+	"\tplayer_id\x18\x02 \x01(\tR\bplayerId\"\xad\x02\n" +
 	"\tGameState\x12\x12\n" +
 	"\x04tick\x18\x01 \x01(\x03R\x04tick\x12/\n" +
 	"\aplayers\x18\x02 \x03(\v2\x15.match.PlayerSnapshotR\aplayers\x12,\n" +
@@ -826,11 +941,14 @@ const file_match_v1_match_proto_rawDesc = "" +
 	"\x06health\x18\x04 \x01(\x05R\x06health\x12\"\n" +
 	"\feliminations\x18\x05 \x01(\x05R\feliminations\x12!\n" +
 	"\fdamage_dealt\x18\x06 \x01(\x05R\vdamageDealt\x12%\n" +
-	"\x0esurvived_ticks\x18\a \x01(\x03R\rsurvivedTicks2\xa2\x01\n" +
+	"\x0esurvived_ticks\x18\a \x01(\x03R\rsurvivedTicks2\x90\x02\n" +
 	"\vGameService\x12P\n" +
 	"\vStreamMatch\x12\x12.match.PlayerInput\x1a\x10.match.GameState\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/match/stream\x12A\n" +
 	"\n" +
-	"StartMatch\x12\x18.match.StartMatchRequest\x1a\x19.match.StartMatchResponseB\x18Z\x16voxel-royale/gen/matchb\x06proto3"
+	"StartMatch\x12\x18.match.StartMatchRequest\x1a\x19.match.StartMatchResponse\x120\n" +
+	"\tPushInput\x12\x12.match.PlayerInput\x1a\x0f.match.InputAck\x12:\n" +
+	"\n" +
+	"WatchMatch\x12\x18.match.WatchMatchRequest\x1a\x10.match.GameState0\x01B\x18Z\x16voxel-royale/gen/matchb\x06proto3"
 
 var (
 	file_match_v1_match_proto_rawDescOnce sync.Once
@@ -844,33 +962,39 @@ func file_match_v1_match_proto_rawDescGZIP() []byte {
 	return file_match_v1_match_proto_rawDescData
 }
 
-var file_match_v1_match_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_match_v1_match_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_match_v1_match_proto_goTypes = []any{
 	(*PlayerInput)(nil),        // 0: match.PlayerInput
 	(*MatchPlayer)(nil),        // 1: match.MatchPlayer
 	(*StartMatchRequest)(nil),  // 2: match.StartMatchRequest
 	(*StartMatchResponse)(nil), // 3: match.StartMatchResponse
-	(*GameState)(nil),          // 4: match.GameState
-	(*PlayerSnapshot)(nil),     // 5: match.PlayerSnapshot
-	(*ChestSnapshot)(nil),      // 6: match.ChestSnapshot
-	(*SafeZoneSnapshot)(nil),   // 7: match.SafeZoneSnapshot
-	(*RankingEntry)(nil),       // 8: match.RankingEntry
+	(*InputAck)(nil),           // 4: match.InputAck
+	(*WatchMatchRequest)(nil),  // 5: match.WatchMatchRequest
+	(*GameState)(nil),          // 6: match.GameState
+	(*PlayerSnapshot)(nil),     // 7: match.PlayerSnapshot
+	(*ChestSnapshot)(nil),      // 8: match.ChestSnapshot
+	(*SafeZoneSnapshot)(nil),   // 9: match.SafeZoneSnapshot
+	(*RankingEntry)(nil),       // 10: match.RankingEntry
 }
 var file_match_v1_match_proto_depIdxs = []int32{
-	1, // 0: match.StartMatchRequest.players:type_name -> match.MatchPlayer
-	5, // 1: match.GameState.players:type_name -> match.PlayerSnapshot
-	6, // 2: match.GameState.chests:type_name -> match.ChestSnapshot
-	7, // 3: match.GameState.safe_zone:type_name -> match.SafeZoneSnapshot
-	8, // 4: match.GameState.ranking:type_name -> match.RankingEntry
-	0, // 5: match.GameService.StreamMatch:input_type -> match.PlayerInput
-	2, // 6: match.GameService.StartMatch:input_type -> match.StartMatchRequest
-	4, // 7: match.GameService.StreamMatch:output_type -> match.GameState
-	3, // 8: match.GameService.StartMatch:output_type -> match.StartMatchResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	1,  // 0: match.StartMatchRequest.players:type_name -> match.MatchPlayer
+	7,  // 1: match.GameState.players:type_name -> match.PlayerSnapshot
+	8,  // 2: match.GameState.chests:type_name -> match.ChestSnapshot
+	9,  // 3: match.GameState.safe_zone:type_name -> match.SafeZoneSnapshot
+	10, // 4: match.GameState.ranking:type_name -> match.RankingEntry
+	0,  // 5: match.GameService.StreamMatch:input_type -> match.PlayerInput
+	2,  // 6: match.GameService.StartMatch:input_type -> match.StartMatchRequest
+	0,  // 7: match.GameService.PushInput:input_type -> match.PlayerInput
+	5,  // 8: match.GameService.WatchMatch:input_type -> match.WatchMatchRequest
+	6,  // 9: match.GameService.StreamMatch:output_type -> match.GameState
+	3,  // 10: match.GameService.StartMatch:output_type -> match.StartMatchResponse
+	4,  // 11: match.GameService.PushInput:output_type -> match.InputAck
+	6,  // 12: match.GameService.WatchMatch:output_type -> match.GameState
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_match_v1_match_proto_init() }
@@ -884,7 +1008,7 @@ func file_match_v1_match_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_match_v1_match_proto_rawDesc), len(file_match_v1_match_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

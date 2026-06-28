@@ -1,23 +1,22 @@
 import Phaser from 'phaser';
 import type { GameState } from './types';
 import { Input } from './input';
-import type { Driver, Mode } from './net';
-import { LiveDriver, OfflineDriver } from './net';
+import type { RealtimeStatus } from './net';
+import { OfflineDriver, RealtimeClient } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
 import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS } from './config';
 import { session } from './session';
 
 export class GameScene extends Phaser.Scene {
   private controls: Input;
-  private driver: Driver = new LiveDriver();
+  private rt!: RealtimeClient;
+  private offline: OfflineDriver | null = null;
   private state: GameState | null = null;
   private renderPos = new Map<string, { x: number; y: number }>();
   private terrain!: Phaser.GameObjects.Graphics;
   private dyn!: Phaser.GameObjects.Graphics;
   private follow!: Phaser.GameObjects.Arc;
   private accum = 0;
-  private pending = false;
-  private triedOffline = false;
 
   constructor(controls: Input) {
     super('game');
@@ -34,37 +33,36 @@ export class GameScene extends Phaser.Scene {
     this.follow = this.add.circle(center.x, center.y, 1, 0x000000, 0);
     this.cameras.main.setZoom(1.3);
     this.cameras.main.startFollow(this.follow, true, 0.15, 0.15);
+
+    // Conexao WebSocket de tempo real com o Gateway (Fase 4). Em caso de falha,
+    // o cliente cai para a simulacao local (OfflineDriver).
+    this.rt = new RealtimeClient(session.roomId, session.myId, (status) => this.onStatus(status));
+    this.rt.connect();
   }
 
   update(_time: number, delta: number) {
     this.accum += delta;
-    if (this.accum >= SEND_MS && !this.pending) {
+    if (this.accum >= SEND_MS) {
       this.accum = 0;
-      void this.sendStep();
+      const input = this.controls.sample();
+      if (this.offline) {
+        this.state = this.offline.step(input);
+      } else {
+        this.rt.sendInput(input);
+      }
+    }
+    if (!this.offline) {
+      const live = this.rt.getState();
+      if (live) this.state = live;
     }
     if (this.state) this.draw();
   }
 
-  private async sendStep() {
-    this.pending = true;
-    const input = this.controls.sample();
-    try {
-      this.state = await this.driver.step(input);
-      this.setMode(this.driver.mode);
-    } catch {
-      if (!this.triedOffline) {
-        this.triedOffline = true;
-        this.driver = new OfflineDriver(this.renderPos.get(session.myId));
-        try {
-          this.state = await this.driver.step(input);
-          this.setMode('offline');
-        } catch {
-          /* ignore */
-        }
-      }
-    } finally {
-      this.pending = false;
+  private onStatus(status: RealtimeStatus) {
+    if (status === 'offline' && !this.offline) {
+      this.offline = new OfflineDriver(this.renderPos.get(session.myId));
     }
+    this.setStatus(status);
   }
 
   private draw() {
@@ -90,11 +88,19 @@ export class GameScene extends Phaser.Scene {
     this.updateHud(s);
   }
 
-  private setMode(mode: Mode) {
+  private setStatus(status: RealtimeStatus) {
     const el = document.getElementById('mode');
     if (!el) return;
-    el.textContent = mode === 'live' ? 'AO VIVO' : 'OFFLINE (mock)';
-    el.className = 'badge ' + (mode === 'live' ? 'badge--live' : 'badge--off');
+    if (status === 'live') {
+      el.textContent = 'AO VIVO';
+      el.className = 'badge badge--live';
+    } else if (status === 'connecting') {
+      el.textContent = 'conectando…';
+      el.className = 'badge badge--off';
+    } else {
+      el.textContent = 'OFFLINE (mock)';
+      el.className = 'badge badge--off';
+    }
   }
 
   private updateHud(s: GameState) {

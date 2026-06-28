@@ -74,7 +74,10 @@ Plans:
   3. Gateway forwards inputs to Game service via gRPC.
   4. Game service publishes state snapshots that Gateway fans out to connected clients.
   5. Basic client reconciliation/interpolation makes remote players visibly move.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 04-01 — Realtime pipeline: `PushInput`/`WatchMatch` RPCs + per-room server clock in Game; Gateway WebSocket `/v1/match/ws` bridging WS↔gRPC with snapshot fan-out; Phaser client moved to a push model (`RealtimeClient`) with interpolation and offline fallback. (`proto/match`, `internal/game/realtime.go`, `internal/gateway/realtime.go`, `frontend/src/net.ts`, `frontend/src/GameScene.ts`)
 
 ### Phase 5: Playable Voxel Battle Royale
 **Goal**: The game is genuinely playable as a 2D mobile voxel battle royale with a complete match loop.  
@@ -130,7 +133,7 @@ Plans:
 | 1. Entrega 1 Distributed Skeleton | 5/5 | Code + docs/report draft done (faltam nomes reais dos alunos) | - |
 | 2. Team Development System | 1/1 | Started: by-design guide and contribution rules added; nominal student roster still pending | 2026-06-27 |
 | 3. QR Lobby and Match Start | 1/1 | Done: QR lobby UI + Lobby→Game match start (room-scoped matches) | 2026-06-27 |
-| 4. Realtime Network Pipeline | 0/0 | Not started | - |
+| 4. Realtime Network Pipeline | 1/1 | Done: WebSocket + server-clock snapshots (NETW-01..04), validated end-to-end | 2026-06-28 |
 | 5. Playable Voxel Battle Royale | 0/0 | Not started | - |
 | 6. Observability and 50-Player Stress Proof | 0/0 | Not started | - |
 | 7. Fault Tolerance, Stateless Infra and VPS Deploy | 0/0 | Not started | - |
@@ -142,4 +145,4 @@ All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-27 to complete Phase 3 (QR lobby + Lobby→Game room-scoped match start)*
+*Roadmap updated: 2026-06-28 to complete Phase 4 (realtime pipeline: WebSocket + server clock)*
