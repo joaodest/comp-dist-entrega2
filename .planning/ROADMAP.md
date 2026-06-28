@@ -59,7 +59,10 @@ Plans:
   2. Player can join from a mobile browser with only a display name.
   3. Lobby displays connected players and ready/waiting status.
   4. Lobby can trigger match start and pass players/config to the Game service.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 03-01 — QR lobby UI + Lobby→Game integration: `StartMatch` RPC, room-scoped matches in Game, `room_id` routing on `StreamMatch`, lobby/QR/ready/start screens in the Phaser client. (`proto/match`, `internal/game`, `internal/lobby`, `services/lobby`, `frontend/src/lobby*.ts`)
 
 ### Phase 4: Realtime Network Pipeline
 **Goal**: Browser clients and backend services exchange real-time gameplay inputs and snapshots reliably.  
@@ -126,7 +129,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Entrega 1 Distributed Skeleton | 5/5 | Code + docs/report draft done (faltam nomes reais dos alunos) | - |
 | 2. Team Development System | 1/1 | Started: by-design guide and contribution rules added; nominal student roster still pending | 2026-06-27 |
-| 3. QR Lobby and Match Start | 0/0 | Not started | - |
+| 3. QR Lobby and Match Start | 1/1 | Done: QR lobby UI + Lobby→Game match start (room-scoped matches) | 2026-06-27 |
 | 4. Realtime Network Pipeline | 0/0 | Not started | - |
 | 5. Playable Voxel Battle Royale | 0/0 | Not started | - |
 | 6. Observability and 50-Player Stress Proof | 0/0 | Not started | - |
@@ -139,4 +142,4 @@ All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-27 to start Phase 2 with by-design development docs and contribution workflow*
+*Roadmap updated: 2026-06-27 to complete Phase 3 (QR lobby + Lobby→Game room-scoped match start)*

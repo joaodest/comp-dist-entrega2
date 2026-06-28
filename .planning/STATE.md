@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** Demonstrar, de forma jogavel e mensuravel, um sistema distribuido em tempo real no qual 50 jogadores participam de uma partida battle royale voxel com backend Go autoritativo e comunicacao entre servicos via gRPC.  
-**Current focus:** Entrega 2 — Fase 2 iniciada com sistema de desenvolvimento em equipe, ownership e regras de contribuição. (Entrega 1 funcional; faltam nomes reais dos alunos.)
+**Current focus:** Entrega 2 — Fase 3 concluída: lobby com QR Code e início de partida integrado (Lobby→Game, partidas por sala). Próximo: Fase 4 (WebSocket/tempo real). (Entrega 1 funcional; faltam nomes reais dos alunos.)
 
 ## Current Position
 
-**Phase:** 2  
-**Plan:** 01-01..01-05 executed; 02-01 by-design development system added  
-**Status:** Distributed skeleton implemented/tested; Phaser MVP builds; Phase 2 docs now define contribution flow, service boundaries, ownership, contract process and validation rules. Faltam nomes reais dos alunos para ownership nominal.  
-**Progress:** ██░░░░░░░░ ~22%
+**Phase:** 3  
+**Plan:** 01-01..01-05; 02-01 by-design; 03-01 QR lobby + Lobby→Game match start  
+**Status:** Distributed skeleton + by-design docs + Fase 3 completa. Lobby chama Game.StartMatch via gRPC; Game mantém partidas por sala (room_id); cliente Phaser tem tela de lobby com QR Code, entrada por nome, ready/start. Faltam nomes reais dos alunos.  
+**Progress:** ███░░░░░░░ ~33%
 
 ## Performance Metrics
 
@@ -20,7 +20,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Requirements mapped: 40
 - Phases total: 8
 - Phase 1 plans complete: 5/5 (01-05 done; report draft com nomes a preencher)
-- Phase 2 plans started: 1/1 documentation pass done (`ARCH-06`)
+- Phase 2 plans complete: 1/1 (`ARCH-06`)
+- Phase 3 plans complete: 1/1 (`LOBB-01..03` done, `LOBB-04` partial)
 - Current delivery target: Entrega 2
 
 ## Accumulated Context
@@ -44,6 +45,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - `playerId` do cliente é único por sessão (evita colisão de identidade e input `stale`, já que o servidor guarda o último `inputSequence` por jogador).
 - Backend: `GameService.StreamMatch` agora **auto-reinicia** o match quando ele termina. Antes, o match global encerrado (tick ≥ 300) fazia o servidor ignorar todo input e travar para todos.
 - Fase 2 iniciada/consolidada: `CONTRIBUTING.md` define checklist de PR e validações; `docs/team-development.md` define fronteiras dos serviços, ownership, processo de contrato, testes e divisão de tarefas; `docs/roles.md` foi expandido com ownership de frontend, observabilidade, carga e deploy.
+- Fase 3 concluída: contrato `GameService.StartMatch` (gRPC interno) + `room_id` no `PlayerInput`; Game passou a manter partidas por sala (`matches map[string]*matchState`, chave `room_id`, mais a global `__global__`); Lobby chama o Game ao iniciar (start do dono e auto-start do `SetReady`), fora do lock e com revert para `WAITING` em falha; `services/lobby` disca `GAME_GRPC_ADDR` e o Compose adiciona `depends_on: game`; cliente Phaser ganhou `lobby.ts`/`lobbyUI.ts`/`session.ts` (criar/entrar/QR/ready/start) com dep `qrcode`. Validado ponta a ponta via curl (start cria partida da sala com roster; global isolado).
 
 ### Todos
 
@@ -51,8 +53,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - (Para submissão final) trocar o rascunho `article` pelo `sbc-template` oficial da SBC e re-verificar o limite de 4 páginas.
 - Confirm Canvas dates for Entrega 1 and Entrega 2.
 - Validate Hostinger VPS resources before deploy phase.
-- Connect `Lobby.StartRoom` to the Game service for match start.
+- [x] Connect `Lobby.StartRoom` to the Game service for match start. (Fase 3)
 - Add request correlation/logging across services (request_id, room_id, player_id).
+- Lobby start-by-time-limit (LOBB-04) e tela de fim de partida/ranking no cliente (Fase 5).
 - Use the Phase 2 guide as gate for upcoming work: every task should name requirement, owner, contract impact, validation and docs affected.
 - **[ABERTO] Refactor de tempo real (Fase 4):** o `StreamMatch` avança 1 tick por request (modelo unário), então a partida atinge `maxMatchTicks` (300) em ~27s e auto-reinicia (zona/mundo resetam). Trocar para o servidor avançar ticks no **próprio relógio** + transporte **WebSocket** (snapshots em tempo real, desacoplados do request). Fix temporário já aplicado: auto-restart do match encerrado para não travar o input.
 
@@ -70,11 +73,12 @@ O pendente administrativo ainda é preencher os nomes reais dos alunos (`PLACEHO
 Next recommended command:
 
 ```text
-Fill student names in docs/roles.md and docs/report/entrega1.tex, then start Phase 3 planning.
+Start Phase 4 (Realtime Network Pipeline): WebSocket + server clock para snapshots em tempo real.
 ```
 
-Antes da Fase 3, vale reconciliar o ROADMAP: o ready-state do Lobby (LOBB-03, escopo da Fase 3) já foi
-implementado na Fase 1, mas ainda falta UI de lobby/QR Code e integração Lobby -> Game.
+Fase 4 vai substituir o atual polling unário (`StreamMatch` 1 tick por request) por WebSocket + relógio
+do servidor, removendo o auto-restart como stopgap. A integração de sala da Fase 3 já fornece `room_id`
+para rotear sessões de WebSocket por partida.
 
 ---
-*State updated: 2026-06-27 — Fase 2 iniciada com sistema by-design de desenvolvimento em equipe. TODO aberto: preencher nomes reais e refactor de tempo real (relógio do servidor + WebSocket, Fase 4).*
+*State updated: 2026-06-27 — Fase 3 concluída (lobby com QR Code + início de partida Lobby→Game, partidas por sala). TODO aberto: preencher nomes reais e refactor de tempo real (WebSocket, Fase 4).*

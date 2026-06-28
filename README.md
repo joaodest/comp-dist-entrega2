@@ -2,9 +2,9 @@
 
 Monorepo do backend distribuido do Voxel Royale. A estrutura atual separa os tres servicos planejados para a Entrega 1:
 
-- `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para o Game.
-- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking.
-- `services/lobby`: boilerplate containerizado para a futura gestao de salas.
+- `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para Game e Lobby.
+- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking; mantem partidas por sala (`room_id`).
+- `services/lobby`: gestao de salas (criar/entrar/pronto/iniciar) que dispara a partida no Game via gRPC (`StartMatch`).
 
 ## Estrutura
 
@@ -109,8 +109,12 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-- **AO VIVO:** fala com o Gateway real (`POST /v1/match/stream`, via proxy do Vite para `:8080`).
-  Suba o backend: `go run ./services/game` e `go run ./services/gateway`.
+- **Lobby (Fase 3):** ao abrir, o cliente mostra a tela de sala — criar sala (com QR Code/URL),
+  entrar por nome (inclusive via `?room=<id>`), marcar pronto e iniciar a partida. Para o fluxo
+  completo de salas suba os três serviços: `go run ./services/game`, `go run ./services/lobby` e
+  `go run ./services/gateway`.
+- **AO VIVO:** durante a partida fala com o Gateway (`POST /v1/match/stream`, via proxy do Vite para `:8080`),
+  enviando o `roomId` da sala.
 - **OFFLINE (mock):** se o Gateway não responder, cai num simulador local e continua jogável.
 - Controles: WASD/setas ou joystick para mover; espaço/ATIRAR; E/BAÚ. Detalhes em
   [`frontend/README.md`](frontend/README.md).
@@ -177,12 +181,11 @@ Trecho esperado do fluxo HTTP Gateway -> gRPC Game:
 - A pasta antiga `voxel-royale/` misturava modulo, gateway e servidor generico; agora a raiz e o monorepo.
 - `cmd/server` foi substituido por `services/game`.
 - O Gateway nao usa mais `localhost` em container; Compose injeta `GAME_GRPC_ADDR=game:50051`.
-- Lobby agora existe como servico separado e containerizado, ainda em boilerplate.
+- Lobby e um servico separado e containerizado, com salas completas e integracao Lobby->Game (Fase 3).
 - Cada servico tem Dockerfile proprio e healthcheck.
 - O Game agora mantem estado em memoria para movimentacao validada, abertura de baus, tres armas, dano, eliminacao, safe zone e ranking.
 
 ## Desvios em Relacao ao Plano Original
 
-- O plano original esperava Gateway -> Lobby -> Game para sala/partida; como o Lobby foi limitado a boilerplate, o fluxo validado ficou Gateway -> Game.
 - O codigo gerado ficou em `gen/`, seguindo o que foi reaproveitado da branch revertida, em vez de `internal/contracts/`.
-- O contrato ativo de Game e `StreamMatch`; `StartMatch` fica para a fase em que Lobby iniciar partidas reais.
+- Alem de `StreamMatch`, o Game expoe `StartMatch` (gRPC interno) chamado pelo Lobby ao iniciar a sala (Fase 3).

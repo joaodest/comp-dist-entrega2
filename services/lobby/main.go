@@ -11,20 +11,32 @@ import (
 	"syscall"
 
 	lobbyv1 "voxel-royale/gen/lobby"
+	matchv1 "voxel-royale/gen/match"
 	"voxel-royale/internal/lobby"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	grpcAddr := env("GRPC_ADDR", ":50052")
 	healthAddr := env("HEALTH_ADDR", ":8081")
+	gameAddr := env("GAME_GRPC_ADDR", "localhost:50051")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	gameConn, err := grpc.NewClient(gameAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("lobby could not create game client: %v", err)
+	}
+	defer func() { _ = gameConn.Close() }()
+
+	starter := &gameMatchStarter{client: matchv1.NewGameServiceClient(gameConn)}
+	lobbyServer := lobby.NewServer().WithMatchStarter(starter)
+
 	grpcServer := grpc.NewServer()
-	lobbyv1.RegisterLobbyServiceServer(grpcServer, lobby.NewServer())
+	lobbyv1.RegisterLobbyServiceServer(grpcServer, lobbyServer)
 
 	listener, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
@@ -45,10 +57,32 @@ func main() {
 		_ = health.Shutdown(context.Background())
 	}()
 
-	log.Printf("lobby grpc boilerplate listening on %s", grpcAddr)
+	log.Printf("lobby grpc listening on %s (game at %s)", grpcAddr, gameAddr)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("lobby grpc server failed: %v", err)
 	}
+}
+
+// gameMatchStarter adapta o cliente gRPC gerado do Game para a interface
+// lobby.MatchStarter, mantendo o pacote de dominio livre do contrato gerado.
+type gameMatchStarter struct {
+	client matchv1.GameServiceClient
+}
+
+func (g *gameMatchStarter) StartMatch(ctx context.Context, roomID string, maxPlayers int32, players []lobby.RosterPlayer) error {
+	req := &matchv1.StartMatchRequest{
+		RoomId:     roomID,
+		MaxPlayers: maxPlayers,
+		Players:    make([]*matchv1.MatchPlayer, 0, len(players)),
+	}
+	for _, p := range players {
+		req.Players = append(req.Players, &matchv1.MatchPlayer{
+			PlayerId:   p.PlayerID,
+			PlayerName: p.PlayerName,
+		})
+	}
+	_, err := g.client.StartMatch(ctx, req)
+	return err
 }
 
 func healthServer(addr string) *http.Server {

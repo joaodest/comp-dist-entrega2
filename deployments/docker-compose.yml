@@ -43,6 +43,10 @@ services:
     environment:
       GRPC_ADDR: :50052
       HEALTH_ADDR: :8081
+      GAME_GRPC_ADDR: game:50051
+    depends_on:
+      game:
+        condition: service_healthy
     expose:
       - "50052"
       - "8081"

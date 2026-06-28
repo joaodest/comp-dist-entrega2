@@ -1,7 +1,7 @@
 // Controlador de input: teclado (WASD/setas, espaço, E) + joystick e botões DOM
 // (touch/mouse). Produz um PlayerInput por amostragem.
 import type { PlayerInput } from './types';
-import { MY_ID } from './config';
+import { session } from './session';
 
 export class Input {
   private keys = new Set<string>();
@@ -84,6 +84,16 @@ export class Input {
     }
     const isAttacking = this.attackBtn || this.keys.has(' ');
     const openChest = this.openBtn || this.keys.has('e');
-    return { playerId: MY_ID, moveX: mx, moveY: my, isAttacking, openChest, inputSequence: ++this.seq, aimX: 0, aimY: 0 };
+    return {
+      playerId: session.myId,
+      moveX: mx,
+      moveY: my,
+      isAttacking,
+      openChest,
+      inputSequence: ++this.seq,
+      aimX: 0,
+      aimY: 0,
+      roomId: session.roomId,
+    };
   }
 }

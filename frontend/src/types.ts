@@ -60,4 +60,6 @@ export interface PlayerInput {
   openChest: boolean;
   aimX: number;
   aimY: number;
+  // roomId roteia o input para a partida da sala (vazio = partida global/demo).
+  roomId?: string;
 }

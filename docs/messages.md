@@ -38,10 +38,15 @@ Navegador / curl
    │            │  gRPC (protobuf)
    │            ▼
    │        Lobby  :50052   (ciclo de vida da sala)
-   │  gRPC (protobuf)
-   ▼
- Game  :50051               (estado autoritativo da partida)
+   │  gRPC          │  gRPC StartMatch (inicio de partida da sala)
+   ▼                ▼
+ Game  :50051 ◄─────┘        (estado autoritativo da partida)
 ```
+
+> **Fase 3:** ao iniciar uma sala (`StartRoom` do dono ou auto-start por todos
+> prontos), o Lobby chama `Game.StartMatch` via gRPC, criando uma partida
+> vinculada ao `room_id`. O input do cliente passa a carregar `room_id` para
+> rotear para a partida correta.
 
 ---
 
@@ -133,7 +138,9 @@ Erro: `NotFound` se a sala não existir.
 
 ### 2.4 `StartRoom` — `POST /v1/rooms/{room_id}/start`
 
-Transição manual `WAITING → STARTED`. **Somente o dono** pode iniciar.
+Transição manual `WAITING → STARTED`. **Somente o dono** pode iniciar. Ao iniciar,
+o Lobby chama `Game.StartMatch` (gRPC) para criar a partida da sala com o roster
+atual. Se o Game não confirmar, a sala volta para `WAITING` e o erro é `Internal`.
 
 | Campo | Tipo | Obrigatório | Observação |
 | --- | --- | --- | --- |
@@ -141,7 +148,7 @@ Transição manual `WAITING → STARTED`. **Somente o dono** pode iniciar.
 | `playerId` | string (body) | sim | Precisa ser igual a `ownerId`. |
 
 Erros: `NotFound`, `FailedPrecondition` (sala não está em `WAITING`),
-`PermissionDenied` (quem chamou não é o dono).
+`PermissionDenied` (quem chamou não é o dono), `Internal` (Game não iniciou a partida).
 
 ```bash
 curl -X POST http://localhost:8080/v1/rooms/room-1/start \
@@ -161,7 +168,8 @@ Erros: `NotFound` (sala ou jogador inexistente).
 ### 2.6 `SetReady` — `POST /v1/rooms/{room_id}/ready`
 
 Marca/desmarca um jogador como pronto. **Quando todos os jogadores presentes estão prontos,
-a sala inicia automaticamente** (`WAITING → STARTED`).
+a sala inicia automaticamente** (`WAITING → STARTED`) e o Lobby chama `Game.StartMatch`
+para a sala (mesma orquestração do `StartRoom`).
 
 | Campo | Tipo | Obrigatório | Observação |
 | --- | --- | --- | --- |
@@ -181,13 +189,14 @@ curl -X POST http://localhost:8080/v1/rooms/room-1/ready \
 
 ## 3. GameService — partida autoritativa
 
-Serviço gRPC `match.GameService` (`proto/match/v1/match.proto`). Hoje há **um único RPC**:
-`StreamMatch`, que recebe um input e devolve o snapshot completo da partida. O servidor é
-autoritativo: ele valida o input, avança um tick e calcula o estado.
+Serviço gRPC `match.GameService` (`proto/match/v1/match.proto`). Dois RPCs:
+`StreamMatch` (recebe input, devolve o snapshot completo) e `StartMatch` (interno,
+chamado pelo Lobby para criar a partida de uma sala). O servidor é autoritativo:
+valida o input, avança um tick e calcula o estado.
 
 > O nome `StreamMatch` é histórico (reaproveitado da branch restaurada). Apesar do nome, no
-> momento é uma chamada unária request/response, não um stream gRPC. O início de partida
-> orquestrado por `Lobby.StartRoom → Game` e o transporte WebSocket ficam para fases futuras.
+> momento é uma chamada unária request/response, não um stream gRPC. O transporte WebSocket
+> em tempo real fica para a Fase 4.
 
 ### 3.1 `StreamMatch` — `POST /v1/match/stream`
 
@@ -202,6 +211,7 @@ Request `PlayerInput`
 | `openChest` | bool | Abre o baú mais próximo dentro do alcance (`2.25`). |
 | `targetPlayerId` | string | Alvo explícito de ataque (opcional). |
 | `aimX`, `aimY` | float | Direção de mira para seleção automática de alvo. |
+| `roomId` | string | Roteia o input para a partida da sala. Vazio usa a partida global (modo demo de um jogador). |
 
 Response `GameState`
 
@@ -218,8 +228,24 @@ Response `GameState`
 ```bash
 curl -X POST http://localhost:8080/v1/match/stream \
   -H 'Content-Type: application/json' \
-  -d '{"playerId":"player-1","moveX":1,"moveY":2,"inputSequence":1,"openChest":false,"isAttacking":false}'
+  -d '{"playerId":"player-1","roomId":"room-1","moveX":1,"moveY":2,"inputSequence":1,"openChest":false,"isAttacking":false}'
 ```
+
+### 3.2 `StartMatch` — gRPC interno (Lobby → Game)
+
+Não exposto pelo Gateway (sem anotação HTTP). Criado/recriado pela transição de
+sala para `STARTED`. Cria uma partida vinculada ao `room_id`, posicionando os
+jogadores do roster da sala.
+
+Request `StartMatchRequest`
+
+| Campo | Tipo | Significado |
+| --- | --- | --- |
+| `roomId` | string | Sala/partida a iniciar. Obrigatório. |
+| `players` | `MatchPlayer[]` | Roster (`playerId`, `playerName`) para pré-spawn. |
+| `maxPlayers` | int32 | Capacidade informada pela sala. |
+
+Response `StartMatchResponse`: `matchId` (= `roomId`) e `started` (bool).
 
 ### Constantes de gameplay (`internal/game/server.go`)
 
@@ -236,9 +262,16 @@ curl -X POST http://localhost:8080/v1/match/stream \
 
 ---
 
-## Itens adiados (fora da Fase 1)
+## Itens adiados (próximas fases)
 
-- `Lobby.StartRoom` ainda **não** dispara a partida no Game via gRPC.
-- Transporte WebSocket de inputs/snapshots em tempo real.
+- Transporte WebSocket de inputs/snapshots em tempo real (Fase 4).
 - Logs correlacionados (`request_id`, `room_id`, `player_id`) entre serviços.
-- Estado de partida por sala (hoje o Game mantém uma única partida em memória).
+- Tela de fim de partida com ranking no cliente (Fase 5).
+
+## Implementado na Fase 3
+
+- `Lobby.StartRoom` e o auto-start do `SetReady` disparam `Game.StartMatch` via gRPC.
+- Estado de partida por sala: o Game mantém uma partida por `room_id` (mais a
+  partida global para o modo demo de um jogador).
+- Cliente web com tela de lobby: criar sala, QR Code/URL, entrar por nome,
+  estado pronto/aguardando e início de partida.

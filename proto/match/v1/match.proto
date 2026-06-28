@@ -13,6 +13,11 @@ service GameService {
       body: "*"
     };
   }
+
+  // StartMatch e chamado internamente pelo Lobby (gRPC service-to-service) para
+  // criar/recriar uma partida vinculada a uma sala. Sem anotacao HTTP: nao e
+  // exposto pelo Gateway.
+  rpc StartMatch(StartMatchRequest) returns (StartMatchResponse);
 }
 
 message PlayerInput {
@@ -25,6 +30,25 @@ message PlayerInput {
   string target_player_id = 7;
   float aim_x = 8;
   float aim_y = 9;
+  // room_id roteia o input para a partida da sala. Vazio usa a partida global
+  // (compatibilidade com o modo demo de um jogador).
+  string room_id = 10;
+}
+
+message MatchPlayer {
+  string player_id = 1;
+  string player_name = 2;
+}
+
+message StartMatchRequest {
+  string room_id = 1;
+  repeated MatchPlayer players = 2;
+  int32 max_players = 3;
+}
+
+message StartMatchResponse {
+  string match_id = 1;
+  bool started = 2;
 }
 
 message GameState {

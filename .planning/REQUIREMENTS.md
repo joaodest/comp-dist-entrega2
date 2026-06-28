@@ -27,10 +27,10 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Lobby and Session
 
-- [ ] **LOBB-01**: Usuario consegue criar uma sala e obter um QR Code/URL com token unico.
-- [ ] **LOBB-02**: Jogador consegue entrar na sala pelo celular usando QR Code/URL e informando apenas nome.
-- [ ] **LOBB-03**: Lobby mostra jogadores conectados e estado de pronto/aguardando.
-- [ ] **LOBB-04**: Lobby inicia a partida quando criterio de inicio e atingido por pronto manual ou limite de tempo.
+- [x] **LOBB-01**: Usuario consegue criar uma sala e obter um QR Code/URL com token unico.
+- [x] **LOBB-02**: Jogador consegue entrar na sala pelo celular usando QR Code/URL e informando apenas nome.
+- [x] **LOBB-03**: Lobby mostra jogadores conectados e estado de pronto/aguardando.
+- [~] **LOBB-04**: Lobby inicia a partida quando criterio de inicio e atingido por pronto manual ou limite de tempo. (start do dono + auto-start por todos prontos; limite de tempo de lobby ainda pendente)
 
 ### Realtime Networking
 
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-04 | Phase 1 | Pending |
 | ARCH-05 | Phase 1 | Pending |
 | ARCH-06 | Phase 2 | Done (`CONTRIBUTING.md`, `docs/team-development.md`, `docs/roles.md`) |
-| LOBB-01 | Phase 3 | Pending |
-| LOBB-02 | Phase 3 | Pending |
-| LOBB-03 | Phase 3 | Pending |
-| LOBB-04 | Phase 3 | Pending |
+| LOBB-01 | Phase 3 | Done (QR Code/URL no cliente; `joinUrl` no Lobby) |
+| LOBB-02 | Phase 3 | Done (entrar por `?room=` + nome) |
+| LOBB-03 | Phase 3 | Done (lista de jogadores + ready/waiting) |
+| LOBB-04 | Phase 3 | Partial (start manual + auto-start; sem limite de tempo) |
 | NETW-01 | Phase 4 | Pending |
 | NETW-02 | Phase 4 | Pending |
 | NETW-03 | Phase 4 | Pending |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-06-27 after Phase 2 by-design documentation*
+*Last updated: 2026-06-27 after Phase 3 (QR lobby + Lobby→Game match start)*

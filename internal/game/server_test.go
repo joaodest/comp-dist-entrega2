@@ -65,6 +65,90 @@ func TestServerStreamMatchRejectsMissingPlayerID(t *testing.T) {
 	}
 }
 
+func TestStartMatchRequiresRoomID(t *testing.T) {
+	server := NewServer()
+
+	if _, err := server.StartMatch(context.Background(), &matchv1.StartMatchRequest{}); err == nil {
+		t.Fatal("StartMatch returned nil error for missing room_id")
+	}
+}
+
+func TestStartMatchPreSpawnsRoster(t *testing.T) {
+	server := NewServer()
+
+	resp, err := server.StartMatch(context.Background(), &matchv1.StartMatchRequest{
+		RoomId: "room-1",
+		Players: []*matchv1.MatchPlayer{
+			{PlayerId: "player-room-1-1", PlayerName: "Ana"},
+			{PlayerId: "player-room-1-2", PlayerName: "Bruno"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("StartMatch failed: %v", err)
+	}
+	if resp.MatchId != "room-1" || !resp.Started {
+		t.Fatalf("response = %+v, want match_id room-1 and started true", resp)
+	}
+
+	// Um jogador da sala faz stream e ja deve ver os dois jogadores posicionados.
+	state, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{
+		PlayerId: "player-room-1-1",
+		RoomId:   "room-1",
+	})
+	if err != nil {
+		t.Fatalf("StreamMatch failed: %v", err)
+	}
+	if len(state.Players) != 2 {
+		t.Fatalf("players length = %d, want 2 (roster pre-spawned)", len(state.Players))
+	}
+}
+
+func TestStreamMatchIsolatesRoomsByRoomID(t *testing.T) {
+	server := NewServer()
+	ctx := context.Background()
+
+	if _, err := server.StreamMatch(ctx, &matchv1.PlayerInput{PlayerId: "a", RoomId: "room-1"}); err != nil {
+		t.Fatalf("StreamMatch room-1 failed: %v", err)
+	}
+	if _, err := server.StreamMatch(ctx, &matchv1.PlayerInput{PlayerId: "b", RoomId: "room-2"}); err != nil {
+		t.Fatalf("StreamMatch room-2 failed: %v", err)
+	}
+
+	state1, err := server.StreamMatch(ctx, &matchv1.PlayerInput{PlayerId: "a", RoomId: "room-1"})
+	if err != nil {
+		t.Fatalf("StreamMatch room-1 (2) failed: %v", err)
+	}
+	if len(state1.Players) != 1 || state1.Players[0].PlayerId != "a" {
+		t.Fatalf("room-1 players = %+v, want only player a", state1.Players)
+	}
+}
+
+func TestStartMatchResetsExistingRoomMatch(t *testing.T) {
+	server := NewServer()
+	ctx := context.Background()
+
+	if _, err := server.StreamMatch(ctx, &matchv1.PlayerInput{PlayerId: "ghost", RoomId: "room-9"}); err != nil {
+		t.Fatalf("StreamMatch failed: %v", err)
+	}
+
+	if _, err := server.StartMatch(ctx, &matchv1.StartMatchRequest{
+		RoomId:  "room-9",
+		Players: []*matchv1.MatchPlayer{{PlayerId: "player-room-9-1"}},
+	}); err != nil {
+		t.Fatalf("StartMatch failed: %v", err)
+	}
+
+	state, err := server.StreamMatch(ctx, &matchv1.PlayerInput{PlayerId: "player-room-9-1", RoomId: "room-9"})
+	if err != nil {
+		t.Fatalf("StreamMatch failed: %v", err)
+	}
+	for _, p := range state.Players {
+		if p.PlayerId == "ghost" {
+			t.Fatal("StartMatch should reset the room match, dropping stale players")
+		}
+	}
+}
+
 func TestServerStreamMatchClampsMovementAndIgnoresStaleInput(t *testing.T) {
 	server := NewServer()
 
@@ -184,7 +268,7 @@ func TestServerStreamMatchAppliesSafeZoneDamage(t *testing.T) {
 	}
 
 	server.mu.Lock()
-	server.match.players["wanderer"].pos = vec2{arenaHalfSize, arenaHalfSize}
+	server.matches[globalMatchKey].players["wanderer"].pos = vec2{arenaHalfSize, arenaHalfSize}
 	server.mu.Unlock()
 
 	state, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{

@@ -4,7 +4,8 @@ import { Input } from './input';
 import type { Driver, Mode } from './net';
 import { LiveDriver, OfflineDriver } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
-import { MY_ID, SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS } from './config';
+import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS } from './config';
+import { session } from './session';
 
 export class GameScene extends Phaser.Scene {
   private controls: Input;
@@ -53,7 +54,7 @@ export class GameScene extends Phaser.Scene {
     } catch {
       if (!this.triedOffline) {
         this.triedOffline = true;
-        this.driver = new OfflineDriver(this.renderPos.get(MY_ID));
+        this.driver = new OfflineDriver(this.renderPos.get(session.myId));
         try {
           this.state = await this.driver.step(input);
           this.setMode('offline');
@@ -81,9 +82,9 @@ export class GameScene extends Phaser.Scene {
     for (const id of [...this.renderPos.keys()]) if (!ids.has(id)) this.renderPos.delete(id);
 
     this.dyn.clear();
-    drawWorld(this.dyn, s, this.renderPos, MY_ID);
+    drawWorld(this.dyn, s, this.renderPos, session.myId);
 
-    const me = this.renderPos.get(MY_ID);
+    const me = this.renderPos.get(session.myId);
     if (me) this.follow.setPosition(me.x, me.y);
 
     this.updateHud(s);
@@ -97,7 +98,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHud(s: GameState) {
-    const me = s.players.find((p) => p.playerId === MY_ID);
+    const me = s.players.find((p) => p.playerId === session.myId);
     const alive = s.players.filter((p) => p.isAlive).length;
     const set = (id: string, text: string) => {
       const el = document.getElementById(id);

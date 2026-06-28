@@ -26,6 +26,10 @@ const (
 	weaponPistol  = "pistol"
 	weaponRifle   = "rifle"
 	weaponShotgun = "shotgun"
+
+	// globalMatchKey guarda a partida usada quando o input nao traz room_id
+	// (modo demo de um jogador, compativel com a Fase 1).
+	globalMatchKey = "__global__"
 )
 
 var weaponProfiles = map[string]weaponProfile{
@@ -65,8 +69,10 @@ var chestTemplates = []chestState{
 type Server struct {
 	matchv1.UnimplementedGameServiceServer
 
-	mu    sync.Mutex
-	match *matchState
+	mu sync.Mutex
+	// matches mantem uma partida por sala (chave = room_id) mais a partida
+	// global (chave = globalMatchKey) para o modo demo.
+	matches map[string]*matchState
 }
 
 type matchState struct {
@@ -113,7 +119,33 @@ type vec2 struct {
 }
 
 func NewServer() *Server {
-	return &Server{match: newMatchState()}
+	return &Server{matches: make(map[string]*matchState)}
+}
+
+// StartMatch cria (ou recria) a partida vinculada a uma sala, ja com os
+// jogadores do lobby posicionados. E chamado pelo Lobby via gRPC quando a sala
+// inicia (start manual do dono ou auto-start por todos prontos).
+func (s *Server) StartMatch(_ context.Context, req *matchv1.StartMatchRequest) (*matchv1.StartMatchResponse, error) {
+	if req == nil || strings.TrimSpace(req.RoomId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "room_id is required")
+	}
+	roomID := strings.TrimSpace(req.RoomId)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	match := newMatchState()
+	for _, p := range req.Players {
+		if p == nil {
+			continue
+		}
+		if id := strings.TrimSpace(p.PlayerId); id != "" {
+			match.ensurePlayer(id)
+		}
+	}
+	s.matches[roomID] = match
+
+	return &matchv1.StartMatchResponse{MatchId: roomID, Started: true}, nil
 }
 
 func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*matchv1.GameState, error) {
@@ -125,18 +157,23 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 	}
 
 	playerID := strings.TrimSpace(input.PlayerId)
+	matchKey := strings.TrimSpace(input.RoomId)
+	if matchKey == "" {
+		matchKey = globalMatchKey
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Reinicia automaticamente quando a partida anterior terminou (limite de
-	// ticks ou ultimo sobrevivente). Sem isso, o match global fica "encerrado"
+	// ticks ou ultimo sobrevivente). Sem isso, a partida fica "encerrada"
 	// e o servidor passa a ignorar todo input -> trava para todos.
-	if s.match == nil || s.match.matchEnded {
-		s.match = newMatchState()
+	match := s.matches[matchKey]
+	if match == nil || match.matchEnded {
+		match = newMatchState()
+		s.matches[matchKey] = match
 	}
 
-	match := s.match
 	player := match.ensurePlayer(playerID)
 	match.tick++
 

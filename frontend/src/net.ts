@@ -1,7 +1,8 @@
 // Driver de partida. LiveDriver fala com o Gateway real (POST /v1/match/stream).
 // OfflineDriver simula localmente para o cliente rodar sem backend (fallback).
 import type { GameState, PlayerInput, PlayerSnapshot } from './types';
-import { GATEWAY, MY_ID, ARENA_HALF } from './config';
+import { GATEWAY, ARENA_HALF } from './config';
+import { session } from './session';
 import { buildSnapshot } from './mock';
 
 export type Mode = 'live' | 'offline';
@@ -49,7 +50,7 @@ export class OfflineDriver implements Driver {
     }
     const base = buildSnapshot(this.tick);
     const me: PlayerSnapshot = {
-      playerId: MY_ID,
+      playerId: session.myId,
       x: this.px,
       y: this.py,
       isAlive: true,
