@@ -2,7 +2,7 @@
 
 **Created:** 2026-04-24  
 **Depth:** comprehensive  
-**Requirements coverage:** 40/40 v1 requirements mapped
+**Requirements coverage:** 41/41 v1 requirements mapped
 
 ## Phases
 
@@ -10,10 +10,11 @@
 - [ ] **Phase 2: Team Development System** - Establish by-design architecture rules, contracts, ownership and contribution workflow for 9 students.
 - [ ] **Phase 3: QR Lobby and Match Start** - Let players create, join and start rooms through QR Code and web services.
 - [ ] **Phase 4: Realtime Network Pipeline** - Connect browser clients to Gateway WebSocket and Game gRPC snapshots.
-- [ ] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
-- [ ] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
-- [ ] **Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy** - Harden failures and make the system transportable/deployable.
-- [ ] **Phase 8: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
+- [x] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
+- [x] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
+- [x] **Phase 7: Fault Tolerance and Local Deploy Readiness** - Harden failures and make the system transportable/deployable.
+- [ ] **Phase 8: VPS Provider Setup and Remote Deploy** - Choose/configure the VPS provider and validate the system on a real remote host.
+- [ ] **Phase 9: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
 
 ## Phase Details
 
@@ -59,7 +60,10 @@ Plans:
   2. Player can join from a mobile browser with only a display name.
   3. Lobby displays connected players and ready/waiting status.
   4. Lobby can trigger match start and pass players/config to the Game service.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 03-01 — QR lobby UI + Lobby→Game integration: `StartMatch` RPC, room-scoped matches in Game, `room_id` routing on `StreamMatch`, lobby/QR/ready/start screens in the Phaser client. (`proto/match`, `internal/game`, `internal/lobby`, `services/lobby`, `frontend/src/lobby*.ts`)
 
 ### Phase 4: Realtime Network Pipeline
 **Goal**: Browser clients and backend services exchange real-time gameplay inputs and snapshots reliably.  
@@ -71,7 +75,10 @@ Plans:
   3. Gateway forwards inputs to Game service via gRPC.
   4. Game service publishes state snapshots that Gateway fans out to connected clients.
   5. Basic client reconciliation/interpolation makes remote players visibly move.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 04-01 — Realtime pipeline: `PushInput`/`WatchMatch` RPCs + per-room server clock in Game; Gateway WebSocket `/v1/match/ws` bridging WS↔gRPC with snapshot fan-out; Phaser client moved to a push model (`RealtimeClient`) with interpolation and offline fallback. (`proto/match`, `internal/game/realtime.go`, `internal/gateway/realtime.go`, `frontend/src/net.ts`, `frontend/src/GameScene.ts`)
 
 ### Phase 5: Playable Voxel Battle Royale
 **Goal**: The game is genuinely playable as a 2D mobile voxel battle royale with a complete match loop.  
@@ -83,7 +90,10 @@ Plans:
   3. Player can open chests, collect weapons, attack and eliminate opponents.
   4. Safe zone shrinks over time and forces match conclusion within 5 minutes.
   5. Match ends with a final ranking shown to players.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 05-01 — Playable match loop: 5-minute server-clock match duration, touch/keyboard movement, auto-target attack input, authoritative chests/weapons/damage/eliminations/safe zone/ranking, and final ranking screen in the Phaser client. (`internal/game`, `frontend/src/GameScene.ts`, `frontend/src/input.ts`, `frontend/src/net.ts`, `frontend/src/mock.ts`)
 
 ### Phase 6: Observability and 50-Player Stress Proof
 **Goal**: The system proves its distributed behavior and 50-player target with metrics, traces and load simulation.  
@@ -95,10 +105,13 @@ Plans:
   3. A repeatable stress command simulates 50 players joining and sending gameplay inputs.
   4. Stress-test results are captured for report and presentation.
   5. The team can explain bottlenecks and scalability tradeoffs using measured data.
-**Plans**: TBD
+**Plans**: 1 plan
 
-### Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy
-**Goal**: The distributed system handles common failures and can run from Docker Compose locally or on the Hostinger VPS.  
+Plans:
+- [x] 06-01 — Observability + stress proof: Prometheus `/metrics` nos tres servicos, OpenTelemetry HTTP/gRPC com OTLP para Jaeger, Grafana provisionado no Compose, runner `tools/stress50`/`make stress50` e smoke local 50/50 conexoes registrado em `docs/stress-results.md`.
+
+### Phase 7: Fault Tolerance and Local Deploy Readiness
+**Goal**: The distributed system handles common failures and can run from Docker Compose locally, ready to be moved to a VPS.  
 **Depends on**: Phase 6  
 **Requirements**: FAIL-01, FAIL-02, FAIL-03, DEPL-01, DEPL-02, DEPL-03  
 **Success Criteria** (what must be TRUE):
@@ -107,11 +120,26 @@ Plans:
   3. Fault-handling tests demonstrate the methods required for Entrega 2.
   4. Docker Compose starts all services, frontend and telemetry consistently.
   5. VPS deployment instructions are reproducible and include health/readiness validation.
+**Plans**: 1 plan
+
+Plans:
+- [x] 07-01 — Fault tolerance + deploy readiness: Game limpa input pendente quando jogador desconecta; Gateway/Lobby/Game expõem `/readyz`; Lobby usa timeout e erro controlado para falha Lobby→Game; Compose inclui frontend Nginx + backends + telemetria; `docs/deploy.md` documenta execução local/VPS; validação local subiu a stack completa e checou frontend health, Gateway readiness e métricas. O deploy remoto real fica separado na Fase 8.
+
+### Phase 8: VPS Provider Setup and Remote Deploy
+**Goal**: The group has a real VPS provider selected, configured and validated with the Docker Compose stack running remotely.  
+**Depends on**: Phase 7  
+**Requirements**: DEPL-04  
+**Success Criteria** (what must be TRUE):
+  1. VPS provider/account is selected and documented (Hostinger or equivalent).
+  2. VPS resources are confirmed against the demo needs (CPU, RAM, disk, bandwidth and open ports).
+  3. SSH access, firewall rules and Docker/Compose are configured on the server.
+  4. The full stack starts on the VPS and public URLs/IP endpoints pass `/frontend-healthz`, `/readyz` and `/metrics`.
+  5. A remote stress proof is captured against the VPS endpoint for the final report/presentation.
 **Plans**: TBD
 
-### Phase 8: Final Report, Roles and Presentation Readiness
+### Phase 9: Final Report, Roles and Presentation Readiness
 **Goal**: The group can submit and present the project clearly, with every student able to explain their contribution.  
-**Depends on**: Phase 7  
+**Depends on**: Phase 8  
 **Requirements**: COUR-05, COUR-06  
 **Success Criteria** (what must be TRUE):
   1. Entrega 2 report expands the first report to cover failures, chosen extra requirement, results and improvements.
@@ -126,17 +154,18 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Entrega 1 Distributed Skeleton | 5/5 | Code + docs/report draft done (faltam nomes reais dos alunos) | - |
 | 2. Team Development System | 1/1 | Started: by-design guide and contribution rules added; nominal student roster still pending | 2026-06-27 |
-| 3. QR Lobby and Match Start | 0/0 | Not started | - |
-| 4. Realtime Network Pipeline | 0/0 | Not started | - |
-| 5. Playable Voxel Battle Royale | 0/0 | Not started | - |
-| 6. Observability and 50-Player Stress Proof | 0/0 | Not started | - |
-| 7. Fault Tolerance, Stateless Infra and VPS Deploy | 0/0 | Not started | - |
-| 8. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
+| 3. QR Lobby and Match Start | 1/1 | Done: QR lobby UI + Lobby→Game match start (room-scoped matches) | 2026-06-27 |
+| 4. Realtime Network Pipeline | 1/1 | Done: WebSocket + server-clock snapshots (NETW-01..04), validated end-to-end | 2026-06-28 |
+| 5. Playable Voxel Battle Royale | 1/1 | Done: full playable loop, 5-minute safe zone and final ranking screen (GAME-01..08) | 2026-06-28 |
+| 6. Observability and 50-Player Stress Proof | 1/1 | Done: OpenTelemetry + Prometheus/Grafana/Jaeger + runner e smoke 50-player (NETW-05, OBSV-01..05) | 2026-06-28 |
+| 7. Fault Tolerance and Local Deploy Readiness | 1/1 | Done: disconnect cleanup, controlled gRPC degradation, readiness checks, frontend in Compose and deploy guide (FAIL-01..03, DEPL-01..03) | 2026-06-28 |
+| 8. VPS Provider Setup and Remote Deploy | 0/0 | Not started: needs provider/account, SSH/firewall/Docker setup and remote validation | - |
+| 9. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
 
 ## Coverage Validation
 
-All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements.
+All 41 v1 requirements are mapped to exactly one phase. No orphaned requirements.
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-27 to start Phase 2 with by-design development docs and contribution workflow*
+*Roadmap updated: 2026-06-28 to add Phase 8 (VPS provider setup + remote deploy)*

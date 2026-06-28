@@ -8,8 +8,10 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
-      '/v1': { target: 'http://localhost:8080', changeOrigin: true },
+      // ws: true encaminha o WebSocket de tempo real (/v1/match/ws) ao Gateway.
+      '/v1': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
       '/healthz': { target: 'http://localhost:8080', changeOrigin: true },
+      '/readyz': { target: 'http://localhost:8080', changeOrigin: true },
     },
   },
 });

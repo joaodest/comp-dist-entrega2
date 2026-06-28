@@ -42,7 +42,7 @@ docker compose -f deployments/docker-compose.yml down
 The smoke response confirmed HTTP Gateway -> gRPC Game:
 
 ```json
-{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"remainingTicks":"299"}
+{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"remainingTicks":"4499"}
 ```
 
 ## Recommended Architecture

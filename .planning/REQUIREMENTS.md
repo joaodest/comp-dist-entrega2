@@ -27,46 +27,47 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Lobby and Session
 
-- [ ] **LOBB-01**: Usuario consegue criar uma sala e obter um QR Code/URL com token unico.
-- [ ] **LOBB-02**: Jogador consegue entrar na sala pelo celular usando QR Code/URL e informando apenas nome.
-- [ ] **LOBB-03**: Lobby mostra jogadores conectados e estado de pronto/aguardando.
-- [ ] **LOBB-04**: Lobby inicia a partida quando criterio de inicio e atingido por pronto manual ou limite de tempo.
+- [x] **LOBB-01**: Usuario consegue criar uma sala e obter um QR Code/URL com token unico.
+- [x] **LOBB-02**: Jogador consegue entrar na sala pelo celular usando QR Code/URL e informando apenas nome.
+- [x] **LOBB-03**: Lobby mostra jogadores conectados e estado de pronto/aguardando.
+- [~] **LOBB-04**: Lobby inicia a partida quando criterio de inicio e atingido por pronto manual ou limite de tempo. (start do dono + auto-start por todos prontos; limite de tempo de lobby ainda pendente)
 
 ### Realtime Networking
 
-- [ ] **NETW-01**: Cliente mantem conexao WebSocket com o Gateway durante a partida.
-- [ ] **NETW-02**: Cliente envia inputs de movimento e acoes com sequencia/timestamp suficiente para reconciliacao.
-- [ ] **NETW-03**: Gateway encaminha inputs ao Game service via gRPC.
-- [ ] **NETW-04**: Game service envia snapshots de estado para o Gateway distribuir aos clientes.
-- [ ] **NETW-05**: Sistema suporta ate 50 jogadores simultaneos em uma partida real ou simulada.
+- [x] **NETW-01**: Cliente mantem conexao WebSocket com o Gateway durante a partida.
+- [x] **NETW-02**: Cliente envia inputs de movimento e acoes com sequencia/timestamp suficiente para reconciliacao.
+- [x] **NETW-03**: Gateway encaminha inputs ao Game service via gRPC.
+- [x] **NETW-04**: Game service envia snapshots de estado para o Gateway distribuir aos clientes.
+- [x] **NETW-05**: Sistema suporta ate 50 jogadores simultaneos em uma partida real ou simulada.
 
 ### Gameplay
 
-- [ ] **GAME-01**: Cliente renderiza uma arena 2D top-down em Phaser no navegador mobile.
-- [ ] **GAME-02**: Jogador consegue mover o personagem com controles touch.
-- [ ] **GAME-03**: Game service gera spawns de jogadores, baus e armas.
-- [ ] **GAME-04**: Jogador consegue abrir baus e coletar armas.
-- [ ] **GAME-05**: Jogo possui tres tipos de armas com comportamentos distintos.
-- [ ] **GAME-06**: Game service valida dano, vida e eliminacao de jogadores.
-- [ ] **GAME-07**: Safe zone encolhe ao longo da partida para forcar termino em ate 5 minutos.
-- [ ] **GAME-08**: Partida termina com ranking final por sobrevivencia e desempenho.
+- [x] **GAME-01**: Cliente renderiza uma arena 2D top-down em Phaser no navegador mobile.
+- [x] **GAME-02**: Jogador consegue mover o personagem com controles touch.
+- [x] **GAME-03**: Game service gera spawns de jogadores, baus e armas.
+- [x] **GAME-04**: Jogador consegue abrir baus e coletar armas.
+- [x] **GAME-05**: Jogo possui tres tipos de armas com comportamentos distintos.
+- [x] **GAME-06**: Game service valida dano, vida e eliminacao de jogadores.
+- [x] **GAME-07**: Safe zone encolhe ao longo da partida para forcar termino em ate 5 minutos.
+- [x] **GAME-08**: Partida termina com ranking final por sobrevivencia e desempenho.
 
 ### Observability and Scale
 
-- [ ] **OBSV-01**: Servicos emitem traces OpenTelemetry para chamadas HTTP, WebSocket lifecycle e gRPC.
-- [ ] **OBSV-02**: Prometheus coleta metricas de tick rate, latencia gRPC, jogadores conectados, banda/payload e erros.
-- [ ] **OBSV-03**: Grafana ou Jaeger permite demonstrar visualmente o fluxo Gateway -> Lobby/Game.
-- [ ] **OBSV-04**: Teste de estresse simula 50 jogadores conectando, enviando inputs e recebendo snapshots.
-- [ ] **OBSV-05**: Resultado do teste de estresse e registrado para embasar escalabilidade no relatorio/apresentacao.
+- [x] **OBSV-01**: Servicos emitem traces OpenTelemetry para chamadas HTTP, WebSocket lifecycle e gRPC.
+- [x] **OBSV-02**: Prometheus coleta metricas de tick rate, latencia gRPC, jogadores conectados, banda/payload e erros.
+- [x] **OBSV-03**: Grafana ou Jaeger permite demonstrar visualmente o fluxo Gateway -> Lobby/Game.
+- [x] **OBSV-04**: Teste de estresse simula 50 jogadores conectando, enviando inputs e recebendo snapshots.
+- [x] **OBSV-05**: Resultado do teste de estresse e registrado para embasar escalabilidade no relatorio/apresentacao.
 
 ### Fault Tolerance and Deploy
 
-- [ ] **FAIL-01**: Sistema lida com desconexao de jogador sem derrubar a partida.
-- [ ] **FAIL-02**: Servicos detectam falha de comunicacao gRPC e retornam erro controlado/estado degradado.
-- [ ] **FAIL-03**: Segunda entrega implementa metodos adequados para tratamento de falhas e testes correspondentes.
-- [ ] **DEPL-01**: Todo o sistema sobe localmente com Docker Compose.
-- [ ] **DEPL-02**: Deploy em VPS Hostinger tem instrucoes reproduziveis.
-- [ ] **DEPL-03**: Servicos sao stateless sempre que possivel e expõem health/readiness checks.
+- [x] **FAIL-01**: Sistema lida com desconexao de jogador sem derrubar a partida.
+- [x] **FAIL-02**: Servicos detectam falha de comunicacao gRPC e retornam erro controlado/estado degradado.
+- [x] **FAIL-03**: Segunda entrega implementa metodos adequados para tratamento de falhas e testes correspondentes.
+- [x] **DEPL-01**: Todo o sistema sobe localmente com Docker Compose.
+- [x] **DEPL-02**: Deploy em VPS Hostinger tem instrucoes reproduziveis.
+- [x] **DEPL-03**: Servicos sao stateless sempre que possivel e expõem health/readiness checks.
+- [ ] **DEPL-04**: Provedor VPS e configurado de fato com conta/servidor, SSH, firewall, Docker Compose, stack remota e validacao publica.
 
 ## v2 Requirements
 
@@ -106,48 +107,49 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COUR-02 | Phase 1 | Pending |
 | COUR-03 | Phase 1 | Pending |
 | COUR-04 | Phase 1 | Pending |
-| COUR-05 | Phase 8 | Pending |
-| COUR-06 | Phase 8 | Pending |
+| COUR-05 | Phase 9 | Pending |
+| COUR-06 | Phase 9 | Pending |
 | ARCH-01 | Phase 1 | Pending |
 | ARCH-02 | Phase 1 | Pending |
 | ARCH-03 | Phase 1 | Pending |
 | ARCH-04 | Phase 1 | Pending |
 | ARCH-05 | Phase 1 | Pending |
 | ARCH-06 | Phase 2 | Done (`CONTRIBUTING.md`, `docs/team-development.md`, `docs/roles.md`) |
-| LOBB-01 | Phase 3 | Pending |
-| LOBB-02 | Phase 3 | Pending |
-| LOBB-03 | Phase 3 | Pending |
-| LOBB-04 | Phase 3 | Pending |
-| NETW-01 | Phase 4 | Pending |
-| NETW-02 | Phase 4 | Pending |
-| NETW-03 | Phase 4 | Pending |
-| NETW-04 | Phase 4 | Pending |
-| NETW-05 | Phase 6 | Pending |
-| GAME-01 | Phase 5 | Pending |
-| GAME-02 | Phase 5 | Pending |
-| GAME-03 | Phase 5 | Pending |
-| GAME-04 | Phase 5 | Pending |
-| GAME-05 | Phase 5 | Pending |
-| GAME-06 | Phase 5 | Pending |
-| GAME-07 | Phase 5 | Pending |
-| GAME-08 | Phase 5 | Pending |
-| OBSV-01 | Phase 6 | Pending |
-| OBSV-02 | Phase 6 | Pending |
-| OBSV-03 | Phase 6 | Pending |
-| OBSV-04 | Phase 6 | Pending |
-| OBSV-05 | Phase 6 | Pending |
-| FAIL-01 | Phase 7 | Pending |
-| FAIL-02 | Phase 7 | Pending |
-| FAIL-03 | Phase 7 | Pending |
-| DEPL-01 | Phase 7 | Pending |
-| DEPL-02 | Phase 7 | Pending |
-| DEPL-03 | Phase 7 | Pending |
+| LOBB-01 | Phase 3 | Done (QR Code/URL no cliente; `joinUrl` no Lobby) |
+| LOBB-02 | Phase 3 | Done (entrar por `?room=` + nome) |
+| LOBB-03 | Phase 3 | Done (lista de jogadores + ready/waiting) |
+| LOBB-04 | Phase 3 | Partial (start manual + auto-start; sem limite de tempo) |
+| NETW-01 | Phase 4 | Done (WebSocket `/v1/match/ws` mantido na partida) |
+| NETW-02 | Phase 4 | Done (inputs sequenciados pelo WebSocket) |
+| NETW-03 | Phase 4 | Done (Gateway → Game via gRPC `PushInput`) |
+| NETW-04 | Phase 4 | Done (Game `WatchMatch` stream + fan-out do Gateway) |
+| NETW-05 | Phase 6 | Done (`tools/stress50`; smoke local 50/50 conexoes, 3.750 inputs/snapshots em 5s) |
+| GAME-01 | Phase 5 | Done (arena Phaser 2D top-down renderizada no cliente) |
+| GAME-02 | Phase 5 | Done (joystick touch + teclado) |
+| GAME-03 | Phase 5 | Done (spawns de jogadores, 9 baus e armas no Game) |
+| GAME-04 | Phase 5 | Done (abrir bau e equipar arma pelo Game) |
+| GAME-05 | Phase 5 | Done (pistol/rifle/shotgun com dano, alcance e cooldown distintos) |
+| GAME-06 | Phase 5 | Done (dano, vida, eliminacao e estatisticas validados no Game) |
+| GAME-07 | Phase 5 | Done (safe zone 5 min/4500 ticks no relogio de 15 Hz) |
+| GAME-08 | Phase 5 | Done (matchEnded + ranking final no Game e tela final no cliente) |
+| OBSV-01 | Phase 6 | Done (OpenTelemetry HTTP/gRPC + OTLP para Jaeger no Compose) |
+| OBSV-02 | Phase 6 | Done (`/metrics` Prometheus em Gateway/Lobby/Game com realtime, tick, sala e erro) |
+| OBSV-03 | Phase 6 | Done (Prometheus + Grafana provisionado; Jaeger UI no Compose) |
+| OBSV-04 | Phase 6 | Done (`make stress50` / `go run ./tools/stress50`) |
+| OBSV-05 | Phase 6 | Done (`docs/stress-results.md`) |
+| FAIL-01 | Phase 7 | Done (Game remove input pendente ao ultimo `WatchMatch` do jogador desconectar; teste cobre cleanup) |
+| FAIL-02 | Phase 7 | Done (`/readyz` degrada com 503 para dependencias indisponiveis; Lobby timeout/revert controlado em `StartMatch`) |
+| FAIL-03 | Phase 7 | Done (`go test ./...` cobre desconexao realtime, readiness Gateway e falha Lobby->Game) |
+| DEPL-01 | Phase 7 | Done (Compose completo com frontend, backends e telemetria subiu; checks `frontend-healthz`, `readyz` e `metrics` OK) |
+| DEPL-02 | Phase 7 | Done (`docs/deploy.md` com roteiro local/VPS; validacao remota real fica em DEPL-04) |
+| DEPL-03 | Phase 7 | Done (`/healthz` + `/readyz`; Gateway/frontend stateless; Lobby/Game estado efemero em memoria documentado) |
+| DEPL-04 | Phase 8 | Pending (precisa escolher/configurar provedor VPS e validar endpoint publico real) |
 
 **Coverage:**
-- v1 requirements: 40 total
-- Mapped to phases: 40
+- v1 requirements: 41 total
+- Mapped to phases: 41
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-06-27 after Phase 2 by-design documentation*
+*Last updated: 2026-06-28 after adding Phase 8 for real VPS provider setup; DEPL-04 pending.*

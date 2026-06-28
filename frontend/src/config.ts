@@ -1,6 +1,8 @@
 // Constantes da arena espelhadas de internal/game/server.go (fonte de verdade).
 export const ARENA_HALF = 50;
-export const MAX_MATCH_TICKS = 300;
+export const SERVER_TICK_HZ = 15;
+export const MATCH_SECONDS = 5 * 60;
+export const MAX_MATCH_TICKS = MATCH_SECONDS * SERVER_TICK_HZ;
 export const SAFE_ZONE_INITIAL = 45;
 export const SAFE_ZONE_FINAL = 5;
 export const PHASES = 5;
@@ -15,7 +17,14 @@ export const WORLD_PX = ARENA_HALF * 2 * PX; // 1600
 // guarda o ultimo inputSequence por jogador; reusar o mesmo id trava o input).
 export const MY_ID = 'web-' + Math.random().toString(36).slice(2, 8);
 export const SEND_MS = 90; // intervalo de envio de input ao Gateway
-export const GATEWAY = '/v1/match/stream'; // via proxy do Vite -> :8080
+export const GATEWAY = '/v1/match/stream'; // via proxy do Vite -> :8080 (legado)
+
+/** URL do WebSocket de tempo real (Fase 4): /v1/match/ws via proxy -> :8080. */
+export function matchWsUrl(roomId: string, playerId: string): string {
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  const params = new URLSearchParams({ room: roomId, player: playerId });
+  return `${scheme}://${location.host}/v1/match/ws?${params.toString()}`;
+}
 
 /** Mundo (-50..50, +y para cima) -> pixels do canvas (origem no topo-esquerda). */
 export function worldToPx(x: number, y: number): { x: number; y: number } {

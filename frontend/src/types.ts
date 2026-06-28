@@ -58,6 +58,9 @@ export interface PlayerInput {
   isAttacking: boolean;
   inputSequence: number;
   openChest: boolean;
+  targetPlayerId?: string;
   aimX: number;
   aimY: number;
+  // roomId roteia o input para a partida da sala (vazio = partida global/demo).
+  roomId?: string;
 }

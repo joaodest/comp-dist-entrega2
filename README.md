@@ -2,9 +2,9 @@
 
 Monorepo do backend distribuido do Voxel Royale. A estrutura atual separa os tres servicos planejados para a Entrega 1:
 
-- `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para o Game.
-- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking.
-- `services/lobby`: boilerplate containerizado para a futura gestao de salas.
+- `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para Game e Lobby.
+- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking; mantem partidas por sala (`room_id`).
+- `services/lobby`: gestao de salas (criar/entrar/pronto/iniciar) que dispara a partida no Game via gRPC (`StartMatch`).
 
 ## Estrutura
 
@@ -95,6 +95,10 @@ curl -X POST http://localhost:8080/v1/match/stream \
 - [Architecture update](docs/architecture.md): arquitetura implementada em relacao ao plano original.
 - [Implementation delta](docs/implementation-delta.md): checklist do que foi feito, desvios e gaps restantes.
 - [Team development](docs/team-development.md): guia by-design da Fase 2 para ownership, contratos, testes e reviews.
+- [Observability and stress](docs/observability.md): Prometheus/Grafana/Jaeger e runner de 50 jogadores da Fase 6.
+- [Stress results](docs/stress-results.md): smoke local com 50 jogadores simultâneos.
+- [Deploy](docs/deploy.md): Docker Compose completo, readiness e roteiro VPS da Fase 7.
+- [VPS provider setup](docs/vps-provider.md): checklist da Fase 8 para escolher/configurar a VPS real.
 - [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
 
 ## Frontend / Cliente (Phaser 2D)
@@ -109,15 +113,54 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-- **AO VIVO:** fala com o Gateway real (`POST /v1/match/stream`, via proxy do Vite para `:8080`).
-  Suba o backend: `go run ./services/game` e `go run ./services/gateway`.
+- **Lobby (Fase 3):** ao abrir, o cliente mostra a tela de sala — criar sala (com QR Code/URL),
+  entrar por nome (inclusive via `?room=<id>`), marcar pronto e iniciar a partida. Para o fluxo
+  completo de salas suba os três serviços: `go run ./services/game`, `go run ./services/lobby` e
+  `go run ./services/gateway`.
+- **AO VIVO:** durante a partida mantém WebSocket com o Gateway (`GET /v1/match/ws`, via proxy do Vite para `:8080`),
+  enviando inputs sequenciados e recebendo snapshots do relógio do servidor.
 - **OFFLINE (mock):** se o Gateway não responder, cai num simulador local e continua jogável.
 - Controles: WASD/setas ou joystick para mover; espaço/ATIRAR; E/BAÚ. Detalhes em
   [`frontend/README.md`](frontend/README.md).
 
-> **Limitação atual (TODO):** o `StreamMatch` avança 1 tick por request, então a partida
-> atinge o limite (300 ticks, ~27s) e **auto-reinicia**. O refactor de tempo real (relógio do
-> servidor + WebSocket) está registrado como TODO aberto (Fase 4).
+> `POST /v1/match/stream` permanece como demo/compatibilidade por `curl`; o jogo real usa
+> WebSocket + `PushInput`/`WatchMatch`.
+
+## Observabilidade e Carga (Fase 6)
+
+Com a stack Docker ativa, Prometheus, Grafana e Jaeger tambem sobem para demonstrar
+o comportamento distribuido:
+
+```bash
+docker compose -f deployments/docker-compose.yml up --build
+make stress50
+```
+
+- Métricas Prometheus: `http://localhost:8080/metrics`, `:8081/metrics`, `:8082/metrics`.
+- Dashboard Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`.
+- Traces Jaeger: `http://localhost:16686/search`.
+- Runner de carga: `go run ./tools/stress50 -players 50 -duration 30s`.
+
+## Tolerância a Falhas e Deploy Local (Fase 7)
+
+O Compose agora sobe o sistema completo: frontend, Gateway, Lobby, Game,
+Prometheus, Grafana e Jaeger.
+
+```bash
+docker compose -f deployments/docker-compose.yml config
+docker compose -f deployments/docker-compose.yml up --build
+```
+
+- Frontend: `http://localhost:5173`.
+- Readiness: `curl http://localhost:8080/readyz`.
+- Frontend health: `curl http://localhost:5173/frontend-healthz`.
+- Guia de deploy e checks de falha: [`docs/deploy.md`](docs/deploy.md).
+
+## Provedor VPS (Fase 8)
+
+O deploy remoto real depende de uma VPS provisionada pelo grupo. Use
+[`docs/vps-provider.md`](docs/vps-provider.md) para registrar provedor, plano, IP,
+SSH, firewall, Docker/Compose e a validação pública antes da fase de relatório.
 
 ## Smoke Test
 
@@ -177,12 +220,11 @@ Trecho esperado do fluxo HTTP Gateway -> gRPC Game:
 - A pasta antiga `voxel-royale/` misturava modulo, gateway e servidor generico; agora a raiz e o monorepo.
 - `cmd/server` foi substituido por `services/game`.
 - O Gateway nao usa mais `localhost` em container; Compose injeta `GAME_GRPC_ADDR=game:50051`.
-- Lobby agora existe como servico separado e containerizado, ainda em boilerplate.
+- Lobby e um servico separado e containerizado, com salas completas e integracao Lobby->Game (Fase 3).
 - Cada servico tem Dockerfile proprio e healthcheck.
 - O Game agora mantem estado em memoria para movimentacao validada, abertura de baus, tres armas, dano, eliminacao, safe zone e ranking.
 
 ## Desvios em Relacao ao Plano Original
 
-- O plano original esperava Gateway -> Lobby -> Game para sala/partida; como o Lobby foi limitado a boilerplate, o fluxo validado ficou Gateway -> Game.
 - O codigo gerado ficou em `gen/`, seguindo o que foi reaproveitado da branch revertida, em vez de `internal/contracts/`.
-- O contrato ativo de Game e `StreamMatch`; `StartMatch` fica para a fase em que Lobby iniciar partidas reais.
+- Alem de `StreamMatch`, o Game expoe `StartMatch` (gRPC interno) chamado pelo Lobby ao iniciar a sala (Fase 3).

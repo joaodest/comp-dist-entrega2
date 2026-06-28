@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "phaser": "^3.80.0"
+    "@types/qrcode": "^1.5.6",
+    "phaser": "^3.80.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

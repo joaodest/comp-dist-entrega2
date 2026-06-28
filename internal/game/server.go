@@ -19,13 +19,17 @@ const (
 	chestOpenRange       = float32(2.25)
 	initialSafeZoneRange = float32(45)
 	finalSafeZoneRange   = float32(5)
-	maxMatchTicks        = int64(300)
+	maxMatchTicks        = int64(5 * 60 * tickHz)
 	safeZoneDamage       = int32(8)
 	maxHealth            = int32(100)
 
 	weaponPistol  = "pistol"
 	weaponRifle   = "rifle"
 	weaponShotgun = "shotgun"
+
+	// globalMatchKey guarda a partida usada quando o input nao traz room_id
+	// (modo demo de um jogador, compativel com a Fase 1).
+	globalMatchKey = "__global__"
 )
 
 var weaponProfiles = map[string]weaponProfile{
@@ -65,8 +69,10 @@ var chestTemplates = []chestState{
 type Server struct {
 	matchv1.UnimplementedGameServiceServer
 
-	mu    sync.Mutex
-	match *matchState
+	mu sync.Mutex
+	// matches mantem uma partida por sala (chave = room_id) mais a partida
+	// global (chave = globalMatchKey) para o modo demo.
+	matches map[string]*matchState
 }
 
 type matchState struct {
@@ -76,6 +82,15 @@ type matchState struct {
 	chests     map[string]*chestState
 	chestIDs   []string
 	matchEnded bool
+
+	// Estado do pipeline de tempo real (Fase 4). pendingInputs guarda o ultimo
+	// input por jogador (consumido a cada tick do relogio do servidor); subs
+	// sao os assinantes de WatchMatch que recebem os snapshots; clockRunning
+	// indica se a goroutine do relogio esta ativa para esta partida.
+	pendingInputs    map[string]*matchv1.PlayerInput
+	connectedPlayers map[string]int
+	subs             map[*subscriber]struct{}
+	clockRunning     bool
 }
 
 type playerState struct {
@@ -113,7 +128,43 @@ type vec2 struct {
 }
 
 func NewServer() *Server {
-	return &Server{match: newMatchState()}
+	return &Server{matches: make(map[string]*matchState)}
+}
+
+// StartMatch cria (ou recria) a partida vinculada a uma sala, ja com os
+// jogadores do lobby posicionados. E chamado pelo Lobby via gRPC quando a sala
+// inicia (start manual do dono ou auto-start por todos prontos).
+func (s *Server) StartMatch(_ context.Context, req *matchv1.StartMatchRequest) (*matchv1.StartMatchResponse, error) {
+	if req == nil || strings.TrimSpace(req.RoomId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "room_id is required")
+	}
+	roomID := strings.TrimSpace(req.RoomId)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	match := newMatchState()
+	for _, p := range req.Players {
+		if p == nil {
+			continue
+		}
+		if id := strings.TrimSpace(p.PlayerId); id != "" {
+			match.ensurePlayer(id)
+		}
+	}
+	// Se a sala ja tinha uma partida com assinantes/relogio ativos (ex.: reinicio
+	// de partida), transfere-os para a nova: o relogio existente passa a dirigir
+	// a partida recriada (runClock resolve a partida pela chave a cada tick) e
+	// nenhuma segunda goroutine de relogio e iniciada.
+	if old := s.matches[roomID]; old != nil {
+		match.subs = old.subs
+		match.connectedPlayers = old.connectedPlayers
+		match.clockRunning = old.clockRunning
+	}
+	s.matches[roomID] = match
+	s.observeStateLocked()
+
+	return &matchv1.StartMatchResponse{MatchId: roomID, Started: true}, nil
 }
 
 func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*matchv1.GameState, error) {
@@ -125,18 +176,23 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 	}
 
 	playerID := strings.TrimSpace(input.PlayerId)
+	matchKey := strings.TrimSpace(input.RoomId)
+	if matchKey == "" {
+		matchKey = globalMatchKey
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Reinicia automaticamente quando a partida anterior terminou (limite de
-	// ticks ou ultimo sobrevivente). Sem isso, o match global fica "encerrado"
+	// ticks ou ultimo sobrevivente). Sem isso, a partida fica "encerrada"
 	// e o servidor passa a ignorar todo input -> trava para todos.
-	if s.match == nil || s.match.matchEnded {
-		s.match = newMatchState()
+	match := s.matches[matchKey]
+	if match == nil || match.matchEnded {
+		match = newMatchState()
+		s.matches[matchKey] = match
 	}
 
-	match := s.match
 	player := match.ensurePlayer(playerID)
 	match.tick++
 
@@ -160,8 +216,11 @@ func (s *Server) StreamMatch(_ context.Context, input *matchv1.PlayerInput) (*ma
 
 func newMatchState() *matchState {
 	match := &matchState{
-		players: make(map[string]*playerState),
-		chests:  make(map[string]*chestState),
+		players:          make(map[string]*playerState),
+		chests:           make(map[string]*chestState),
+		pendingInputs:    make(map[string]*matchv1.PlayerInput),
+		connectedPlayers: make(map[string]int),
+		subs:             make(map[*subscriber]struct{}),
 	}
 	for i := range chestTemplates {
 		chest := chestTemplates[i]
@@ -431,11 +490,15 @@ func safeZoneAtTick(tick int64) *matchv1.SafeZoneSnapshot {
 		progress = 1
 	}
 	radius := initialSafeZoneRange - ((initialSafeZoneRange - finalSafeZoneRange) * progress)
+	phase := tick / (maxMatchTicks / 5)
+	if phase >= 5 {
+		phase = 4
+	}
 	return &matchv1.SafeZoneSnapshot{
 		CenterX: 0,
 		CenterY: 0,
 		Radius:  radius,
-		Phase:   tick / (maxMatchTicks / 5),
+		Phase:   phase,
 	}
 }
 

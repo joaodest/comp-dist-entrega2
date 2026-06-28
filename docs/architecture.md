@@ -52,7 +52,7 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 | --- | --- |
 | Monorepo structure | Implemented at repo root with service, internal, proto, gen and deployment boundaries. |
 | Gateway service | Implemented as HTTP entrypoint with healthcheck and grpc-gateway proxy to Game and Lobby. |
-| Game service | Implemented as separate gRPC service with authoritative `StreamMatch` movement, chests, weapons, damage, safe zone and ranking behavior. |
+| Game service | Implemented as separate gRPC service with authoritative room-scoped gameplay: server-clock movement, chests, weapons, damage, safe zone and ranking behavior. |
 | Lobby service | Implemented with in-memory room state: CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom. 24 unit tests. |
 | Per-service containers | Implemented with one Dockerfile per service. |
 | Docker Compose | Implemented in `deployments/docker-compose.yml`; Gateway depends on healthy Game and Lobby. |
@@ -63,17 +63,27 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 
 | Service | Runtime role | Exposed interface |
 | --- | --- | --- |
-| Gateway | Public HTTP edge | `GET /healthz`, `POST /v1/match/stream`, `POST /v1/rooms`, `POST /v1/rooms/{id}/join`, `GET /v1/rooms/{id}`, `POST /v1/rooms/{id}/start`, `POST /v1/rooms/{id}/leave` |
-| Game | Authoritative gameplay backend | gRPC `GameService.StreamMatch`, health `GET /healthz` on `:8082` |
+| Gateway | Public HTTP edge | `GET /healthz`, WebSocket `GET /v1/match/ws`, `POST /v1/match/stream`, `POST /v1/rooms`, `POST /v1/rooms/{id}/join`, `GET /v1/rooms/{id}`, `POST /v1/rooms/{id}/start`, `POST /v1/rooms/{id}/leave` |
+| Game | Authoritative gameplay backend | gRPC `GameService.StreamMatch`, `StartMatch`, `PushInput`, `WatchMatch` (server-clock snapshot stream), health `GET /healthz` on `:8082` |
 | Lobby | Room lifecycle manager | gRPC `LobbyService.CreateRoom`, `JoinRoom`, `GetRoom`, `StartRoom`, `LeaveRoom`, health `GET /healthz` on `:8081` |
+
+## Realtime Pipeline (Phase 4)
+
+- Browser keeps a WebSocket (`/v1/match/ws?room&player`) open for the whole match.
+- Client inputs (JSON `PlayerInput`) are forwarded to Game via gRPC `PushInput`.
+- Game runs a per-room **server clock** (~15 Hz) that advances the authoritative
+  simulation from buffered inputs, independent of client cadence.
+- Game streams a `GameState` snapshot per tick via `WatchMatch`; the Gateway
+  fans out each snapshot to every connected WebSocket of that room.
+- The clock starts on the first `WatchMatch` subscriber and stops when the last
+  one disconnects, so unwatched matches consume no CPU. This replaced the Phase 1
+  unary auto-restart stopgap for room matches.
 
 ## Remaining Gaps
 
-- Connect Lobby StartRoom to Game service (trigger match start via gRPC).
-- Split `StreamMatch` into clearer match lifecycle contracts if the team wants explicit `StartMatch`, input and snapshot streams.
-- Add WebSocket real-time input/snapshot pipeline.
 - Add observability, correlated request IDs, stress testing and failure handling.
 - Add structured logging with request_id, room_id, player_id across services.
+- Robust reconnection and disconnect handling that keeps matches alive (Phase 7).
 
 ## Validation Evidence
 
@@ -96,7 +106,7 @@ Observed smoke responses:
 
 Game:
 ```json
-{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"safeZone":{"centerX":0,"centerY":0,"radius":44.866665,"phase":"0"},"remainingTicks":"299"}
+{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"safeZone":{"centerX":0,"centerY":0,"radius":44.991112,"phase":"0"},"remainingTicks":"4499"}
 ```
 
 Lobby:

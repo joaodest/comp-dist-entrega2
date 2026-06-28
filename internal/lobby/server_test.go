@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	lobbyv1 "voxel-royale/gen/lobby"
@@ -563,6 +564,97 @@ func TestSetReadyDoesNotStartIfNotEveryoneReady(t *testing.T) {
 
 	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_WAITING {
 		t.Fatalf("status = %v, want WAITING", resp.Status)
+	}
+}
+
+type fakeStarter struct {
+	calls       int
+	lastRoomID  string
+	lastRoster  []RosterPlayer
+	lastMaxSize int32
+	err         error
+}
+
+func (f *fakeStarter) StartMatch(_ context.Context, roomID string, maxPlayers int32, players []RosterPlayer) error {
+	f.calls++
+	f.lastRoomID = roomID
+	f.lastRoster = players
+	f.lastMaxSize = maxPlayers
+	return f.err
+}
+
+func TestStartRoomTriggersMatchStart(t *testing.T) {
+	starter := &fakeStarter{}
+	srv := NewServer().WithMatchStarter(starter)
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+	if _, err := srv.JoinRoom(ctx, &lobbyv1.JoinRoomRequest{RoomId: created.RoomId, PlayerName: "Bruno"}); err != nil {
+		t.Fatalf("JoinRoom failed: %v", err)
+	}
+
+	resp := mustStartRoom(t, srv, ctx, created.RoomId, created.OwnerId)
+	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_STARTED {
+		t.Fatalf("status = %v, want STARTED", resp.Status)
+	}
+	if starter.calls != 1 {
+		t.Fatalf("starter calls = %d, want 1", starter.calls)
+	}
+	if starter.lastRoomID != created.RoomId {
+		t.Fatalf("starter room id = %q, want %q", starter.lastRoomID, created.RoomId)
+	}
+	if len(starter.lastRoster) != 2 {
+		t.Fatalf("starter roster size = %d, want 2", len(starter.lastRoster))
+	}
+}
+
+func TestSetReadyAutoStartTriggersMatch(t *testing.T) {
+	starter := &fakeStarter{}
+	srv := NewServer().WithMatchStarter(starter)
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+	joined, err := srv.JoinRoom(ctx, &lobbyv1.JoinRoomRequest{RoomId: created.RoomId, PlayerName: "Bruno"})
+	if err != nil {
+		t.Fatalf("JoinRoom failed: %v", err)
+	}
+	brunoID := joined.Players[1].PlayerId
+
+	if _, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{RoomId: created.RoomId, PlayerId: created.OwnerId, Ready: true}); err != nil {
+		t.Fatalf("SetReady owner failed: %v", err)
+	}
+	if starter.calls != 0 {
+		t.Fatalf("starter should not be called before everyone is ready (calls=%d)", starter.calls)
+	}
+
+	resp, err := srv.SetReady(ctx, &lobbyv1.SetReadyRequest{RoomId: created.RoomId, PlayerId: brunoID, Ready: true})
+	if err != nil {
+		t.Fatalf("SetReady bruno failed: %v", err)
+	}
+	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_STARTED {
+		t.Fatalf("status = %v, want STARTED", resp.Status)
+	}
+	if starter.calls != 1 {
+		t.Fatalf("starter calls = %d, want 1", starter.calls)
+	}
+}
+
+func TestStartRoomMatchStartFailureRevertsToWaiting(t *testing.T) {
+	starter := &fakeStarter{err: errors.New("game unavailable")}
+	srv := NewServer().WithMatchStarter(starter)
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, srv, ctx, "Ana", 0)
+
+	_, err := srv.StartRoom(ctx, &lobbyv1.StartRoomRequest{RoomId: created.RoomId, PlayerId: created.OwnerId})
+	assertCode(t, err, codes.Internal)
+
+	resp, err := srv.GetRoom(ctx, &lobbyv1.GetRoomRequest{RoomId: created.RoomId})
+	if err != nil {
+		t.Fatalf("GetRoom failed: %v", err)
+	}
+	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_WAITING {
+		t.Fatalf("status = %v, want WAITING after failed match start", resp.Status)
 	}
 }
 

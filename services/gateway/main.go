@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"voxel-royale/internal/gateway"
+	"voxel-royale/internal/observability"
 )
 
 func main() {
@@ -17,6 +18,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	shutdownTracing, err := observability.SetupTracing(ctx, "voxel-gateway")
+	if err != nil {
+		log.Printf("gateway tracing disabled: %v", err)
+	} else {
+		defer func() { _ = shutdownTracing(context.Background()) }()
+	}
+
 	handler, err := gateway.NewProxyMux(ctx, cfg.GameGRPCAddr, cfg.LobbyGRPCAddr)
 	if err != nil {
 		log.Fatalf("gateway setup failed: %v", err)
@@ -24,7 +32,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    cfg.HTTPAddr,
-		Handler: handler,
+		Handler: observability.HTTPHandler("gateway-http", handler),
 	}
 
 	go func() {

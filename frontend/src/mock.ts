@@ -3,7 +3,7 @@
 // a partir do tick (mesma fórmula do servidor) para o slider mostrar o
 // encolhimento. Jogadores são um cenário representativo de meia-partida.
 
-import type { GameState, PlayerSnapshot, ChestSnapshot } from './types';
+import type { GameState, PlayerSnapshot, ChestSnapshot, RankingEntry } from './types';
 import { phaseAtTick, safeZoneRadiusAtTick, MAX_MATCH_TICKS } from './config';
 
 const CHESTS: ChestSnapshot[] = [
@@ -61,8 +61,31 @@ export function buildSnapshot(tick: number): GameState {
       radius: safeZoneRadiusAtTick(tick),
       phase: String(phaseAtTick(tick)),
     },
-    ranking: [],
-    matchEnded: false,
+    ranking: rankPlayers(players),
+    matchEnded: tick >= MAX_MATCH_TICKS,
     remainingTicks: String(Math.max(0, MAX_MATCH_TICKS - tick)),
   };
+}
+
+export function rankPlayers(players: PlayerSnapshot[]): RankingEntry[] {
+  return [...players]
+    .sort((a, b) => {
+      if (a.isAlive !== b.isAlive) return a.isAlive ? -1 : 1;
+      if (a.isAlive && a.eliminations !== b.eliminations) return b.eliminations - a.eliminations;
+      if (a.isAlive && a.health !== b.health) return b.health - a.health;
+      if (Number(a.survivedTicks) !== Number(b.survivedTicks)) {
+        return Number(b.survivedTicks) - Number(a.survivedTicks);
+      }
+      if (a.damageDealt !== b.damageDealt) return b.damageDealt - a.damageDealt;
+      return a.playerId.localeCompare(b.playerId);
+    })
+    .map((p, i) => ({
+      playerId: p.playerId,
+      place: i + 1,
+      isAlive: p.isAlive,
+      health: p.health,
+      eliminations: p.eliminations,
+      damageDealt: p.damageDealt,
+      survivedTicks: p.survivedTicks,
+    }));
 }
