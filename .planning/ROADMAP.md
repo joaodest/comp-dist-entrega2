@@ -10,7 +10,7 @@
 - [ ] **Phase 2: Team Development System** - Establish by-design architecture rules, contracts, ownership and contribution workflow for 9 students.
 - [ ] **Phase 3: QR Lobby and Match Start** - Let players create, join and start rooms through QR Code and web services.
 - [ ] **Phase 4: Realtime Network Pipeline** - Connect browser clients to Gateway WebSocket and Game gRPC snapshots.
-- [ ] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
+- [x] **Phase 5: Playable Voxel Battle Royale** - Deliver the full 2D mobile battle royale loop.
 - [ ] **Phase 6: Observability and 50-Player Stress Proof** - Make distributed behavior measurable and prove the 50-player target.
 - [ ] **Phase 7: Fault Tolerance, Stateless Infra and VPS Deploy** - Harden failures and make the system transportable/deployable.
 - [ ] **Phase 8: Final Report, Roles and Presentation Readiness** - Prepare Entrega 2 materials and make every student presentation-ready.
@@ -89,7 +89,10 @@ Plans:
   3. Player can open chests, collect weapons, attack and eliminate opponents.
   4. Safe zone shrinks over time and forces match conclusion within 5 minutes.
   5. Match ends with a final ranking shown to players.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 05-01 — Playable match loop: 5-minute server-clock match duration, touch/keyboard movement, auto-target attack input, authoritative chests/weapons/damage/eliminations/safe zone/ranking, and final ranking screen in the Phaser client. (`internal/game`, `frontend/src/GameScene.ts`, `frontend/src/input.ts`, `frontend/src/net.ts`, `frontend/src/mock.ts`)
 
 ### Phase 6: Observability and 50-Player Stress Proof
 **Goal**: The system proves its distributed behavior and 50-player target with metrics, traces and load simulation.  
@@ -134,7 +137,7 @@ Plans:
 | 2. Team Development System | 1/1 | Started: by-design guide and contribution rules added; nominal student roster still pending | 2026-06-27 |
 | 3. QR Lobby and Match Start | 1/1 | Done: QR lobby UI + Lobby→Game match start (room-scoped matches) | 2026-06-27 |
 | 4. Realtime Network Pipeline | 1/1 | Done: WebSocket + server-clock snapshots (NETW-01..04), validated end-to-end | 2026-06-28 |
-| 5. Playable Voxel Battle Royale | 0/0 | Not started | - |
+| 5. Playable Voxel Battle Royale | 1/1 | Done: full playable loop, 5-minute safe zone and final ranking screen (GAME-01..08) | 2026-06-28 |
 | 6. Observability and 50-Player Stress Proof | 0/0 | Not started | - |
 | 7. Fault Tolerance, Stateless Infra and VPS Deploy | 0/0 | Not started | - |
 | 8. Final Report, Roles and Presentation Readiness | 0/0 | Not started | - |
@@ -145,4 +148,4 @@ All 40 v1 requirements are mapped to exactly one phase. No orphaned requirements
 
 ---
 *Roadmap created: 2026-04-24 after initialization*  
-*Roadmap updated: 2026-06-28 to complete Phase 4 (realtime pipeline: WebSocket + server clock)*
+*Roadmap updated: 2026-06-28 to complete Phase 5 (playable loop + final ranking)*

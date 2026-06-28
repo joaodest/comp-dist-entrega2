@@ -42,14 +42,14 @@ Requirements for the semester project and its first two assessed deliveries. Eac
 
 ### Gameplay
 
-- [ ] **GAME-01**: Cliente renderiza uma arena 2D top-down em Phaser no navegador mobile.
-- [ ] **GAME-02**: Jogador consegue mover o personagem com controles touch.
-- [ ] **GAME-03**: Game service gera spawns de jogadores, baus e armas.
-- [ ] **GAME-04**: Jogador consegue abrir baus e coletar armas.
-- [ ] **GAME-05**: Jogo possui tres tipos de armas com comportamentos distintos.
-- [ ] **GAME-06**: Game service valida dano, vida e eliminacao de jogadores.
-- [ ] **GAME-07**: Safe zone encolhe ao longo da partida para forcar termino em ate 5 minutos.
-- [ ] **GAME-08**: Partida termina com ranking final por sobrevivencia e desempenho.
+- [x] **GAME-01**: Cliente renderiza uma arena 2D top-down em Phaser no navegador mobile.
+- [x] **GAME-02**: Jogador consegue mover o personagem com controles touch.
+- [x] **GAME-03**: Game service gera spawns de jogadores, baus e armas.
+- [x] **GAME-04**: Jogador consegue abrir baus e coletar armas.
+- [x] **GAME-05**: Jogo possui tres tipos de armas com comportamentos distintos.
+- [x] **GAME-06**: Game service valida dano, vida e eliminacao de jogadores.
+- [x] **GAME-07**: Safe zone encolhe ao longo da partida para forcar termino em ate 5 minutos.
+- [x] **GAME-08**: Partida termina com ranking final por sobrevivencia e desempenho.
 
 ### Observability and Scale
 
@@ -123,14 +123,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NETW-03 | Phase 4 | Done (Gateway → Game via gRPC `PushInput`) |
 | NETW-04 | Phase 4 | Done (Game `WatchMatch` stream + fan-out do Gateway) |
 | NETW-05 | Phase 6 | Pending |
-| GAME-01 | Phase 5 | Pending |
-| GAME-02 | Phase 5 | Pending |
-| GAME-03 | Phase 5 | Pending |
-| GAME-04 | Phase 5 | Pending |
-| GAME-05 | Phase 5 | Pending |
-| GAME-06 | Phase 5 | Pending |
-| GAME-07 | Phase 5 | Pending |
-| GAME-08 | Phase 5 | Pending |
+| GAME-01 | Phase 5 | Done (arena Phaser 2D top-down renderizada no cliente) |
+| GAME-02 | Phase 5 | Done (joystick touch + teclado) |
+| GAME-03 | Phase 5 | Done (spawns de jogadores, 9 baus e armas no Game) |
+| GAME-04 | Phase 5 | Done (abrir bau e equipar arma pelo Game) |
+| GAME-05 | Phase 5 | Done (pistol/rifle/shotgun com dano, alcance e cooldown distintos) |
+| GAME-06 | Phase 5 | Done (dano, vida, eliminacao e estatisticas validados no Game) |
+| GAME-07 | Phase 5 | Done (safe zone 5 min/4500 ticks no relogio de 15 Hz) |
+| GAME-08 | Phase 5 | Done (matchEnded + ranking final no Game e tela final no cliente) |
 | OBSV-01 | Phase 6 | Pending |
 | OBSV-02 | Phase 6 | Pending |
 | OBSV-03 | Phase 6 | Pending |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-06-28 after Phase 4 (realtime pipeline: WebSocket + server clock; NETW-01..04 done)*
+*Last updated: 2026-06-28 after Phase 5 (playable loop, 5-minute safe zone and final ranking; GAME-01..08 done)*

@@ -52,7 +52,7 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 | --- | --- |
 | Monorepo structure | Implemented at repo root with service, internal, proto, gen and deployment boundaries. |
 | Gateway service | Implemented as HTTP entrypoint with healthcheck and grpc-gateway proxy to Game and Lobby. |
-| Game service | Implemented as separate gRPC service with authoritative `StreamMatch` movement, chests, weapons, damage, safe zone and ranking behavior. |
+| Game service | Implemented as separate gRPC service with authoritative room-scoped gameplay: server-clock movement, chests, weapons, damage, safe zone and ranking behavior. |
 | Lobby service | Implemented with in-memory room state: CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom. 24 unit tests. |
 | Per-service containers | Implemented with one Dockerfile per service. |
 | Docker Compose | Implemented in `deployments/docker-compose.yml`; Gateway depends on healthy Game and Lobby. |
@@ -106,7 +106,7 @@ Observed smoke responses:
 
 Game:
 ```json
-{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"safeZone":{"centerX":0,"centerY":0,"radius":44.866665,"phase":"0"},"remainingTicks":"299"}
+{"tick":"1","players":[{"playerId":"player-1","x":1,"y":2,"isAlive":true,"health":100,"weapon":"pistol"}],"safeZone":{"centerX":0,"centerY":0,"radius":44.991112,"phase":"0"},"remainingTicks":"4499"}
 ```
 
 Lobby:

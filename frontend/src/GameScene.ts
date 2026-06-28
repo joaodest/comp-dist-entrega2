@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import type { GameState } from './types';
+import type { GameState, PlayerInput } from './types';
 import { Input } from './input';
 import type { RealtimeStatus } from './net';
 import { OfflineDriver, RealtimeClient } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
-import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS } from './config';
+import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS, SERVER_TICK_HZ } from './config';
 import { session } from './session';
 
 export class GameScene extends Phaser.Scene {
@@ -17,6 +17,7 @@ export class GameScene extends Phaser.Scene {
   private dyn!: Phaser.GameObjects.Graphics;
   private follow!: Phaser.GameObjects.Arc;
   private accum = 0;
+  private endShown = false;
 
   constructor(controls: Input) {
     super('game');
@@ -44,11 +45,13 @@ export class GameScene extends Phaser.Scene {
     this.accum += delta;
     if (this.accum >= SEND_MS) {
       this.accum = 0;
-      const input = this.controls.sample();
-      if (this.offline) {
-        this.state = this.offline.step(input);
-      } else {
-        this.rt.sendInput(input);
+      if (!this.state?.matchEnded) {
+        const input = this.withAutoTarget(this.controls.sample());
+        if (this.offline) {
+          this.state = this.offline.step(input);
+        } else {
+          this.rt.sendInput(input);
+        }
       }
     }
     if (!this.offline) {
@@ -60,7 +63,7 @@ export class GameScene extends Phaser.Scene {
 
   private onStatus(status: RealtimeStatus) {
     if (status === 'offline' && !this.offline) {
-      this.offline = new OfflineDriver(this.renderPos.get(session.myId));
+      this.offline = new OfflineDriver(this.currentPlayerWorld());
     }
     this.setStatus(status);
   }
@@ -86,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     if (me) this.follow.setPosition(me.x, me.y);
 
     this.updateHud(s);
+    this.updateEndScreen(s);
   }
 
   private setStatus(status: RealtimeStatus) {
@@ -115,5 +119,70 @@ export class GameScene extends Phaser.Scene {
     set('hp', me ? `${me.health}` : '—');
     set('weapon', me ? me.weapon : '—');
     set('tick', `${s.tick}/${MAX_MATCH_TICKS}`);
+  }
+
+  private updateEndScreen(s: GameState) {
+    if (!s.matchEnded || this.endShown) return;
+    this.endShown = true;
+
+    const end = document.getElementById('end-screen') as HTMLElement | null;
+    const title = document.getElementById('end-title');
+    const ranking = document.getElementById('end-ranking');
+    const summary = document.getElementById('end-summary');
+    if (!end || !title || !ranking || !summary) return;
+
+    const entries = s.ranking.length > 0 ? s.ranking : [...s.players]
+      .sort((a, b) => Number(b.isAlive) - Number(a.isAlive) || b.health - a.health)
+      .map((p, i) => ({
+        playerId: p.playerId,
+        place: i + 1,
+        isAlive: p.isAlive,
+        health: p.health,
+        eliminations: p.eliminations,
+        damageDealt: p.damageDealt,
+        survivedTicks: p.survivedTicks,
+      }));
+    const mine = entries.find((e) => e.playerId === session.myId);
+
+    title.textContent = mine?.place === 1 ? 'Vitoria!' : 'Ranking final';
+    ranking.replaceChildren();
+    for (const entry of entries.slice(0, 10)) {
+      const li = document.createElement('li');
+      li.className = entry.playerId === session.myId ? 'end-ranking__row end-ranking__row--me' : 'end-ranking__row';
+      const seconds = Math.floor(Number(entry.survivedTicks) / SERVER_TICK_HZ);
+      li.textContent = `#${entry.place} ${entry.playerId}${entry.playerId === session.myId ? ' (voce)' : ''} · ${entry.eliminations} elim · ${entry.damageDealt} dano · ${seconds}s`;
+      ranking.appendChild(li);
+    }
+    summary.textContent = mine
+      ? `Sua colocacao: #${mine.place} com ${mine.eliminations} eliminacao(oes).`
+      : 'Partida concluida pelo servidor.';
+    end.hidden = false;
+  }
+
+  private currentPlayerWorld(): { x: number; y: number } | undefined {
+    const me = this.state?.players.find((p) => p.playerId === session.myId);
+    return me ? { x: me.x, y: me.y } : undefined;
+  }
+
+  private withAutoTarget(input: PlayerInput): PlayerInput {
+    if (!input.isAttacking || !this.state) return input;
+    const me = this.state.players.find((p) => p.playerId === session.myId && p.isAlive);
+    if (!me) return input;
+
+    let nearest: { id: string; d: number; dx: number; dy: number } | null = null;
+    for (const p of this.state.players) {
+      if (!p.isAlive || p.playerId === session.myId) continue;
+      const dx = p.x - me.x;
+      const dy = p.y - me.y;
+      const d = Math.hypot(dx, dy);
+      if (!nearest || d < nearest.d) nearest = { id: p.playerId, d, dx, dy };
+    }
+    if (!nearest || nearest.d <= 0) return input;
+    return {
+      ...input,
+      targetPlayerId: nearest.id,
+      aimX: nearest.dx / nearest.d,
+      aimY: nearest.dy / nearest.d,
+    };
   }
 }

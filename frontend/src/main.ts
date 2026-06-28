@@ -27,6 +27,14 @@ function startGame() {
       </div>
       <div class="hint">WASD/setas mover · espaço atacar · E abrir baú</div>
     </div>
+    <div id="end-screen" class="end-screen" hidden>
+      <div class="end-card">
+        <p id="end-kicker" class="end-card__kicker">partida encerrada</p>
+        <h1 id="end-title" class="end-card__title">Ranking final</h1>
+        <ol id="end-ranking" class="end-ranking"></ol>
+        <p id="end-summary" class="end-card__summary"></p>
+      </div>
+    </div>
     <div id="controls">
       <div id="joy" class="joy"><div id="thumb" class="joy__thumb"></div></div>
       <div class="btns">

@@ -54,8 +54,8 @@ func TestRealtimeClockStreamsAdvancingSnapshots(t *testing.T) {
 		done <- server.WatchMatch(&matchv1.WatchMatchRequest{RoomId: "room-rt", PlayerId: "p1"}, stream)
 	}()
 
-	// Buffer um input de movimento para a direita; o relogio deve consumi-lo a
-	// cada tick (modelo authoritative, desacoplado da chegada de inputs).
+	// Buffer um input de movimento para a direita; o relogio deve consumi-lo em
+	// um tick authoritative, desacoplado da chegada do pacote.
 	if _, err := server.PushInput(ctx, &matchv1.PlayerInput{
 		PlayerId:      "p1",
 		RoomId:        "room-rt",
@@ -91,7 +91,32 @@ func TestRealtimeClockStreamsAdvancingSnapshots(t *testing.T) {
 		t.Fatalf("player p1 missing from snapshot: %+v", last.Players)
 	}
 	if player.X <= 0 {
-		t.Fatalf("buffered input was not applied each tick: X = %v, want > 0", player.X)
+		t.Fatalf("buffered input was not applied: X = %v, want > 0", player.X)
+	}
+}
+
+func TestRealtimeAdvanceTickIgnoresStaleInput(t *testing.T) {
+	match := newMatchState()
+	player := match.ensurePlayer("p1")
+	match.pendingInputs["p1"] = &matchv1.PlayerInput{
+		PlayerId:      "p1",
+		MoveX:         1,
+		InputSequence: 2,
+	}
+
+	match.advanceTick()
+	if player.pos.x != 1 {
+		t.Fatalf("first input moved player to X = %v, want 1", player.pos.x)
+	}
+
+	match.pendingInputs["p1"] = &matchv1.PlayerInput{
+		PlayerId:      "p1",
+		MoveX:         1,
+		InputSequence: 2,
+	}
+	match.advanceTick()
+	if player.pos.x != 1 {
+		t.Fatalf("stale input moved player to X = %v, want 1", player.pos.x)
 	}
 }
 

@@ -177,6 +177,9 @@ func (m *matchState) advanceTick() {
 		if input == nil {
 			continue
 		}
+		if isStaleInput(player, input) {
+			continue
+		}
 		applyInputSequence(player, input)
 		m.movePlayer(player, input.MoveX, input.MoveY)
 		if input.OpenChest {

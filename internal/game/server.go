@@ -19,7 +19,7 @@ const (
 	chestOpenRange       = float32(2.25)
 	initialSafeZoneRange = float32(45)
 	finalSafeZoneRange   = float32(5)
-	maxMatchTicks        = int64(300)
+	maxMatchTicks        = int64(5 * 60 * tickHz)
 	safeZoneDamage       = int32(8)
 	maxHealth            = int32(100)
 
@@ -486,11 +486,15 @@ func safeZoneAtTick(tick int64) *matchv1.SafeZoneSnapshot {
 		progress = 1
 	}
 	radius := initialSafeZoneRange - ((initialSafeZoneRange - finalSafeZoneRange) * progress)
+	phase := tick / (maxMatchTicks / 5)
+	if phase >= 5 {
+		phase = 4
+	}
 	return &matchv1.SafeZoneSnapshot{
 		CenterX: 0,
 		CenterY: 0,
 		Radius:  radius,
-		Phase:   tick / (maxMatchTicks / 5),
+		Phase:   phase,
 	}
 }
 

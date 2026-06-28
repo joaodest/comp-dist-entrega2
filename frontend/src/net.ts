@@ -3,9 +3,9 @@
 // sequenciados e recebe snapshots publicados pelo relogio do servidor.
 // OfflineDriver: fallback local (mock) quando o backend nao esta acessivel.
 import type { GameState, PlayerInput, PlayerSnapshot } from './types';
-import { ARENA_HALF, matchWsUrl } from './config';
+import { ARENA_HALF, matchWsUrl, SEND_MS, SERVER_TICK_HZ } from './config';
 import { session } from './session';
-import { buildSnapshot } from './mock';
+import { buildSnapshot, rankPlayers } from './mock';
 
 export type Mode = 'live' | 'offline';
 export type RealtimeStatus = 'connecting' | 'live' | 'offline';
@@ -117,6 +117,7 @@ function clamp(v: number, a: number, b: number): number {
 export class OfflineDriver {
   readonly mode: Mode = 'offline';
   private tick = 0;
+  private tickCarry = 0;
   private px: number;
   private py: number;
 
@@ -126,7 +127,10 @@ export class OfflineDriver {
   }
 
   step(input: PlayerInput): GameState {
-    this.tick++;
+    this.tickCarry += (SEND_MS / 1000) * SERVER_TICK_HZ;
+    const elapsedTicks = Math.max(1, Math.floor(this.tickCarry));
+    this.tickCarry -= elapsedTicks;
+    this.tick += elapsedTicks;
     const mag = Math.hypot(input.moveX, input.moveY);
     if (mag > 0.01) {
       const stepLen = Math.min(2.5, mag * 2.5);
@@ -146,6 +150,7 @@ export class OfflineDriver {
       damageTaken: 0,
       survivedTicks: String(this.tick),
     };
-    return { ...base, players: [...base.players, me] };
+    const players = [...base.players, me];
+    return { ...base, players, ranking: rankPlayers(players) };
   }
 }

@@ -1,6 +1,8 @@
 // Constantes da arena espelhadas de internal/game/server.go (fonte de verdade).
 export const ARENA_HALF = 50;
-export const MAX_MATCH_TICKS = 300;
+export const SERVER_TICK_HZ = 15;
+export const MATCH_SECONDS = 5 * 60;
+export const MAX_MATCH_TICKS = MATCH_SECONDS * SERVER_TICK_HZ;
 export const SAFE_ZONE_INITIAL = 45;
 export const SAFE_ZONE_FINAL = 5;
 export const PHASES = 5;

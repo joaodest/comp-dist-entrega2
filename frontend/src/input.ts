@@ -8,6 +8,7 @@ export class Input {
   private joy = { active: false, x: 0, y: 0 };
   private attackBtn = false;
   private openBtn = false;
+  private lastAim = { x: 1, y: 0 };
   private seq = 0;
 
   constructor(base: HTMLElement, thumb: HTMLElement, attack: HTMLElement, open: HTMLElement) {
@@ -84,6 +85,10 @@ export class Input {
     }
     const isAttacking = this.attackBtn || this.keys.has(' ');
     const openChest = this.openBtn || this.keys.has('e');
+    const mag = Math.hypot(mx, my);
+    if (mag > 0.01) {
+      this.lastAim = { x: mx / mag, y: my / mag };
+    }
     return {
       playerId: session.myId,
       moveX: mx,
@@ -91,8 +96,8 @@ export class Input {
       isAttacking,
       openChest,
       inputSequence: ++this.seq,
-      aimX: 0,
-      aimY: 0,
+      aimX: this.lastAim.x,
+      aimY: this.lastAim.y,
       roomId: session.roomId,
     };
   }

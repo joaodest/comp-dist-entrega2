@@ -113,15 +113,14 @@ npm run dev      # http://localhost:5173
   entrar por nome (inclusive via `?room=<id>`), marcar pronto e iniciar a partida. Para o fluxo
   completo de salas suba os três serviços: `go run ./services/game`, `go run ./services/lobby` e
   `go run ./services/gateway`.
-- **AO VIVO:** durante a partida fala com o Gateway (`POST /v1/match/stream`, via proxy do Vite para `:8080`),
-  enviando o `roomId` da sala.
+- **AO VIVO:** durante a partida mantém WebSocket com o Gateway (`GET /v1/match/ws`, via proxy do Vite para `:8080`),
+  enviando inputs sequenciados e recebendo snapshots do relógio do servidor.
 - **OFFLINE (mock):** se o Gateway não responder, cai num simulador local e continua jogável.
 - Controles: WASD/setas ou joystick para mover; espaço/ATIRAR; E/BAÚ. Detalhes em
   [`frontend/README.md`](frontend/README.md).
 
-> **Limitação atual (TODO):** o `StreamMatch` avança 1 tick por request, então a partida
-> atinge o limite (300 ticks, ~27s) e **auto-reinicia**. O refactor de tempo real (relógio do
-> servidor + WebSocket) está registrado como TODO aberto (Fase 4).
+> `POST /v1/match/stream` permanece como demo/compatibilidade por `curl`; o jogo real usa
+> WebSocket + `PushInput`/`WatchMatch`.
 
 ## Smoke Test
 

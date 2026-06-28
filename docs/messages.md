@@ -304,9 +304,9 @@ websocat 'ws://localhost:8080/v1/match/ws?room=room-1&player=player-1'
 | --- | --- | --- |
 | Arena (meia-largura) | 50 | Mundo de `-50..50` em cada eixo. |
 | Movimento por tick | 2.5 | Limite do vetor de movimento. |
-| Duração da partida | 300 ticks | Também encerra por último sobrevivente. |
+| Duração da partida | 4500 ticks (~5 min a 15 Hz) | Também encerra por último sobrevivente. |
 | Zona segura | 45 → 5 | Encolhe linearmente; dano fora da zona: 8/tick. |
-| Fases da zona | 5 | `phase = tick / 60`. |
+| Fases da zona | 5 | `phase` avança a cada 900 ticks e fica limitado a `0..4`. |
 | Vida máxima | 100 | — |
 | Armas | pistol (18 / alc. 10), rifle (24 / alc. 16), shotgun (42 / alc. 5) | dano / alcance; cooldown 1–2 ticks. |
 | Baús | 9 | Posições e armas fixas (`chest-01..09`). |
@@ -316,8 +316,17 @@ websocat 'ws://localhost:8080/v1/match/ws?room=room-1&player=player-1'
 ## Itens adiados (próximas fases)
 
 - Logs correlacionados (`request_id`, `room_id`, `player_id`) entre serviços.
-- Tela de fim de partida com ranking no cliente (Fase 5).
 - Reconexão robusta e tratamento de desconexão sem afetar a partida (Fase 7).
+
+## Implementado na Fase 5
+
+- Partida em tempo real passou a durar até 5 minutos no relógio do servidor
+  (`4500` ticks a 15 Hz), com zona segura encolhendo até o raio final.
+- Cliente Phaser exibe tela de fim de partida com ranking final vindo do
+  `GameState` autoritativo (`matchEnded` + `ranking`).
+- Botão/tecla de ataque usa auto-alvo no inimigo vivo mais próximo; o Game segue
+  validando alcance, cooldown, dano, vida e eliminação.
+- Fallback offline também encerra a partida e monta ranking local para demo.
 
 ## Implementado na Fase 4
 
