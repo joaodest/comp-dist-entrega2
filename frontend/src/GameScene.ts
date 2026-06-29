@@ -5,7 +5,7 @@ import type { RealtimeStatus } from './net';
 import { OfflineDriver, RealtimeClient } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
 import { Bullets } from './bullets';
-import { SEND_MS, worldToPx, PHASES, MAX_MATCH_TICKS, SERVER_TICK_HZ } from './config';
+import { SEND_MS, WORLD_PX, worldToPx, PHASES, MAX_MATCH_TICKS, SERVER_TICK_HZ } from './config';
 import { session } from './session';
 
 type Heading = { x: number; y: number };
@@ -40,7 +40,8 @@ export class GameScene extends Phaser.Scene {
 
     const center = worldToPx(0, 0);
     this.follow = this.add.circle(center.x, center.y, 1, 0x000000, 0);
-    this.cameras.main.setZoom(1.3);
+    this.cameras.main.setBounds(0, 0, WORLD_PX, WORLD_PX);
+    this.cameras.main.setZoom(1.15);
     this.cameras.main.startFollow(this.follow, true, 0.15, 0.15);
 
     // Conexao WebSocket de tempo real com o Gateway (Fase 4). Em caso de falha,

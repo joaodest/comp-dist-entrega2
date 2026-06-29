@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	arenaHalfSize        = float32(100)
+	arenaHalfSize        = float32(120)
 	maxMovePerTick       = float32(2.5)
 	chestOpenRange       = float32(2.25)
-	initialSafeZoneRange = float32(90)
-	finalSafeZoneRange   = float32(8)
+	initialSafeZoneRange = float32(108)
+	finalSafeZoneRange   = float32(10)
 	maxMatchTicks        = int64(5 * 60 * tickHz)
 	safeZoneDamage       = int32(8)
 	maxHealth            = int32(100)
@@ -40,18 +40,26 @@ var weaponProfiles = map[string]weaponProfile{
 
 var spawnPoints = []vec2{
 	{0, 0},
-	{6, 0},
-	{-6, 0},
-	{0, 6},
-	{0, -6},
-	{8, 8},
-	{-8, 8},
-	{8, -8},
-	{-8, -8},
-	{14, 0},
-	{-14, 0},
-	{0, 14},
-	{0, -14},
+	{64, 0},
+	{-64, 0},
+	{0, 64},
+	{0, -64},
+	{45, 45},
+	{-45, 45},
+	{45, -45},
+	{-45, -45},
+	{86, 28},
+	{-86, 28},
+	{86, -28},
+	{-86, -28},
+	{28, 86},
+	{-28, 86},
+	{28, -86},
+	{-28, -86},
+	{72, 72},
+	{-72, 72},
+	{72, -72},
+	{-72, -72},
 }
 
 var chestTemplates = []chestState{
@@ -64,6 +72,14 @@ var chestTemplates = []chestState{
 	{id: "chest-07", pos: vec2{-28, -28}, weapon: weaponRifle},
 	{id: "chest-08", pos: vec2{50, 0}, weapon: weaponShotgun},
 	{id: "chest-09", pos: vec2{0, -50}, weapon: weaponPistol},
+	{id: "chest-10", pos: vec2{72, 48}, weapon: weaponRifle},
+	{id: "chest-11", pos: vec2{-72, 48}, weapon: weaponPistol},
+	{id: "chest-12", pos: vec2{72, -48}, weapon: weaponShotgun},
+	{id: "chest-13", pos: vec2{-72, -48}, weapon: weaponRifle},
+	{id: "chest-14", pos: vec2{0, 84}, weapon: weaponShotgun},
+	{id: "chest-15", pos: vec2{84, 0}, weapon: weaponPistol},
+	{id: "chest-16", pos: vec2{0, -84}, weapon: weaponRifle},
+	{id: "chest-17", pos: vec2{-84, 0}, weapon: weaponShotgun},
 }
 
 type Server struct {
@@ -506,8 +522,13 @@ func spawnFor(index int) vec2 {
 	if index < len(spawnPoints) {
 		return spawnPoints[index]
 	}
-	angle := float64(index) * 2 * math.Pi / 50
-	ring := float32(40 + (index/len(spawnPoints))*12)
+	slot := index - len(spawnPoints)
+	angle := float64(slot) * 2.399963229728653
+	ring := float32(54 + (slot/16)*18)
+	maxRing := minFloat32(arenaHalfSize-16, initialSafeZoneRange-8)
+	if ring > maxRing {
+		ring = maxRing
+	}
 	return vec2{x: ring * float32(math.Cos(angle)), y: ring * float32(math.Sin(angle))}
 }
 
@@ -568,6 +589,13 @@ func clamp(value, minValue, maxValue float32) float32 {
 }
 
 func minInt32(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func minFloat32(a, b float32) float32 {
 	if a < b {
 		return a
 	}

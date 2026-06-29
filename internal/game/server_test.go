@@ -101,6 +101,13 @@ func TestStartMatchPreSpawnsRoster(t *testing.T) {
 	if len(state.Players) != 2 {
 		t.Fatalf("players length = %d, want 2 (roster pre-spawned)", len(state.Players))
 	}
+
+	first := findPlayer(t, state, "player-room-1-1")
+	second := findPlayer(t, state, "player-room-1-2")
+	spawnDistance := distance(vec2{first.X, first.Y}, vec2{second.X, second.Y})
+	if spawnDistance < 50 {
+		t.Fatalf("spawn distance = %v, want roster players more spread out", spawnDistance)
+	}
 }
 
 func TestStreamMatchIsolatesRoomsByRoomID(t *testing.T) {
@@ -217,6 +224,11 @@ func TestServerStreamMatchAccountsDamageEliminationAndRanking(t *testing.T) {
 	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{PlayerId: "target", InputSequence: 1}); err != nil {
 		t.Fatalf("target join failed: %v", err)
 	}
+
+	server.mu.Lock()
+	server.matches[globalMatchKey].players["attacker"].pos = vec2{0, 0}
+	server.matches[globalMatchKey].players["target"].pos = vec2{6, 0}
+	server.mu.Unlock()
 
 	var state *matchv1.GameState
 	for sequence := int64(2); sequence <= 7; sequence++ {

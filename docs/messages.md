@@ -302,14 +302,14 @@ websocat 'ws://localhost:8080/v1/match/ws?room=room-1&player=player-1'
 
 | Parâmetro | Valor | Observação |
 | --- | --- | --- |
-| Arena (meia-largura) | 100 | Mundo de `-100..100` em cada eixo. |
+| Arena (meia-largura) | 120 | Mundo de `-120..120` em cada eixo. |
 | Movimento por tick | 2.5 | Limite do vetor de movimento. |
 | Duração da partida | 4500 ticks (~5 min a 15 Hz) | Também encerra por último sobrevivente. |
-| Zona segura | 90 → 8 | Encolhe linearmente; dano fora da zona: 8/tick. |
+| Zona segura | 108 → 10 | Encolhe linearmente; dano fora da zona: 8/tick. |
 | Fases da zona | 5 | `phase` avança a cada 900 ticks e fica limitado a `0..4`. |
 | Vida máxima | 100 | — |
 | Armas | pistol (18 / alc. 10), rifle (24 / alc. 16), shotgun (42 / alc. 5) | dano / alcance; cooldown 1–2 ticks. |
-| Baús | 9 | Posições e armas fixas (`chest-01..09`). |
+| Baús | 17 | Posições e armas fixas (`chest-01..17`). |
 
 ---
 

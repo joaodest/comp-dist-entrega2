@@ -16,25 +16,33 @@ const CHESTS: ChestSnapshot[] = [
   { chestId: 'chest-07', x: -28, y: -28, weapon: 'rifle', isOpened: false, openedByPlayerId: '' },
   { chestId: 'chest-08', x: 50, y: 0, weapon: 'shotgun', isOpened: false, openedByPlayerId: '' },
   { chestId: 'chest-09', x: 0, y: -50, weapon: 'pistol', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-10', x: 72, y: 48, weapon: 'rifle', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-11', x: -72, y: 48, weapon: 'pistol', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-12', x: 72, y: -48, weapon: 'shotgun', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-13', x: -72, y: -48, weapon: 'rifle', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-14', x: 0, y: 84, weapon: 'shotgun', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-15', x: 84, y: 0, weapon: 'pistol', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-16', x: 0, y: -84, weapon: 'rifle', isOpened: false, openedByPlayerId: '' },
+  { chestId: 'chest-17', x: -84, y: 0, weapon: 'shotgun', isOpened: false, openedByPlayerId: '' },
 ];
 
 type Seed = { id: string; x: number; y: number; hp: number; w: string; alive: boolean; elim: number };
 
 const SEEDS: Seed[] = [
-  { id: 'player-1', x: 8, y: -12, hp: 78, w: 'rifle', alive: true, elim: 2 },
-  { id: 'player-2', x: -24, y: 16, hp: 100, w: 'pistol', alive: true, elim: 0 },
-  { id: 'player-3', x: 40, y: 28, hp: 64, w: 'shotgun', alive: true, elim: 1 },
-  { id: 'player-4', x: -44, y: -36, hp: 42, w: 'rifle', alive: true, elim: 0 },
-  { id: 'player-5', x: 16, y: 44, hp: 100, w: 'pistol', alive: true, elim: 0 },
-  { id: 'player-6', x: -12, y: -20, hp: 53, w: 'shotgun', alive: true, elim: 3 },
-  { id: 'player-7', x: 62, y: -8, hp: 18, w: 'rifle', alive: true, elim: 0 },
-  { id: 'player-8', x: -32, y: 40, hp: 87, w: 'pistol', alive: true, elim: 1 },
-  { id: 'player-9', x: 24, y: -32, hp: 0, w: 'rifle', alive: false, elim: 0 },
-  { id: 'player-10', x: -56, y: 4, hp: 0, w: 'shotgun', alive: false, elim: 0 },
-  { id: 'player-11', x: 4, y: 8, hp: 96, w: 'pistol', alive: true, elim: 0 },
-  { id: 'player-12', x: -8, y: 56, hp: 71, w: 'rifle', alive: true, elim: 2 },
-  { id: 'player-13', x: 48, y: 48, hp: 0, w: 'pistol', alive: false, elim: 0 },
-  { id: 'player-14', x: -40, y: -12, hp: 35, w: 'shotgun', alive: true, elim: 0 },
+  { id: 'player-1', x: 10, y: -14, hp: 78, w: 'rifle', alive: true, elim: 2 },
+  { id: 'player-2', x: -64, y: 8, hp: 100, w: 'pistol', alive: true, elim: 0 },
+  { id: 'player-3', x: 74, y: 42, hp: 64, w: 'shotgun', alive: true, elim: 1 },
+  { id: 'player-4', x: -74, y: -48, hp: 42, w: 'rifle', alive: true, elim: 0 },
+  { id: 'player-5', x: 18, y: 78, hp: 100, w: 'pistol', alive: true, elim: 0 },
+  { id: 'player-6', x: -18, y: -72, hp: 53, w: 'shotgun', alive: true, elim: 3 },
+  { id: 'player-7', x: 92, y: -10, hp: 18, w: 'rifle', alive: true, elim: 0 },
+  { id: 'player-8', x: -88, y: 44, hp: 87, w: 'pistol', alive: true, elim: 1 },
+  { id: 'player-9', x: 48, y: -70, hp: 0, w: 'rifle', alive: false, elim: 0 },
+  { id: 'player-10', x: -92, y: 4, hp: 0, w: 'shotgun', alive: false, elim: 0 },
+  { id: 'player-11', x: 34, y: 28, hp: 96, w: 'pistol', alive: true, elim: 0 },
+  { id: 'player-12', x: -28, y: 88, hp: 71, w: 'rifle', alive: true, elim: 2 },
+  { id: 'player-13', x: 82, y: 82, hp: 0, w: 'pistol', alive: false, elim: 0 },
+  { id: 'player-14', x: -54, y: -18, hp: 35, w: 'shotgun', alive: true, elim: 0 },
 ];
 
 export function buildSnapshot(tick: number): GameState {
