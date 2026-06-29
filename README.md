@@ -98,6 +98,7 @@ curl -X POST http://localhost:8080/v1/match/stream \
 - [Observability and stress](docs/observability.md): Prometheus/Grafana/Jaeger e runner de 50 jogadores da Fase 6.
 - [Stress results](docs/stress-results.md): smoke local com 50 jogadores simultâneos.
 - [Deploy](docs/deploy.md): Docker Compose completo, readiness e roteiro VPS da Fase 7.
+- [Lobby replication](docs/lobby-replication.md): algoritmo primario-backup para replicacao versionada do estado de salas.
 - [VPS provider setup](docs/vps-provider.md): checklist da Fase 8 para escolher/configurar a VPS real.
 - [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
 
@@ -143,7 +144,8 @@ make stress50
 
 ## Tolerância a Falhas e Deploy Local (Fase 7)
 
-O Compose agora sobe o sistema completo: frontend, Gateway, Lobby, Game,
+O Compose agora sobe o sistema completo: frontend, Gateway, Lobby primario,
+Lobby backup, Game,
 Prometheus, Grafana e Jaeger.
 
 ```bash

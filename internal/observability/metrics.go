@@ -85,6 +85,14 @@ var (
 		Name: "voxel_lobby_room_events_total",
 		Help: "Eventos de sala processados pelo Lobby.",
 	}, []string{"event", "result"})
+	LobbyReplicationEvents = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "voxel_lobby_replication_events_total",
+		Help: "Eventos de replicacao primario-backup processados pelo Lobby.",
+	}, []string{"operation", "result"})
+	LobbyReplicationVersion = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "voxel_lobby_replication_version",
+		Help: "Ultima versao de estado aplicada pelo algoritmo primario-backup do Lobby.",
+	})
 )
 
 func MetricsHandler() http.Handler {

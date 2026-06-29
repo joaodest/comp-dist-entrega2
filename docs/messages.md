@@ -24,11 +24,12 @@ Fontes de verdade:
 | Gateway | Borda HTTP pública | HTTP (REST/JSON) | `:8080` | publicada no host (`8080:8080`) |
 | Game | Backend autoritativo de partida | gRPC `GameService` | `:50051` | só na rede do Compose (`game:50051`) |
 | Game | Health check | HTTP | `:8082` | só na rede do Compose |
-| Lobby | Gestor de salas | gRPC `LobbyService` | `:50052` | só na rede do Compose (`lobby:50052`) |
-| Lobby | Health check | HTTP | `:8081` | só na rede do Compose |
+| Lobby primario | Gestor de salas | gRPC `LobbyService` | `:50052` | só na rede do Compose (`lobby-primary:50052`) |
+| Lobby primario | Health check | HTTP | `:8081` | só na rede do Compose |
+| Lobby backup | Replica do estado de salas | gRPC `LobbyService` read-only + HTTP replicacao | `:50052` / `:8081` | só na rede do Compose (`lobby-backup`) |
 
 O Gateway descobre os back-ends por variáveis de ambiente
-(`GAME_GRPC_ADDR=game:50051`, `LOBBY_GRPC_ADDR=lobby:50052`).
+(`GAME_GRPC_ADDR=game:50051`, `LOBBY_GRPC_ADDR=lobby-primary:50052`).
 
 ```text
 Navegador / curl
@@ -37,8 +38,10 @@ Navegador / curl
   Gateway  :8080
    │            │  gRPC (protobuf)
    │            ▼
-   │        Lobby  :50052   (ciclo de vida da sala)
-   │  gRPC          │  gRPC StartMatch (inicio de partida da sala)
+   │        Lobby primary :50052   (ciclo de vida da sala)
+   │            │
+   │            ├──HTTP snapshot versionado──► Lobby backup :8081
+   │  gRPC      │  gRPC StartMatch (inicio de partida da sala)
    ▼                ▼
  Game  :50051 ◄─────┘        (estado autoritativo da partida)
 ```

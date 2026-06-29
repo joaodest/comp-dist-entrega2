@@ -1,6 +1,6 @@
 # Architecture Update Against the Original Plan
 
-**Date:** 2026-05-01 (updated 2026-05-09)  
+**Date:** 2026-05-01 (updated 2026-06-29)
 **Scope:** what was implemented after the monorepo/containerization plan.
 
 ## Summary
@@ -13,8 +13,9 @@ Two runtime paths are now verified:
 Room flow:
   HTTP client
     -> Gateway service (:8080)
-    -> Lobby service gRPC (lobby:50052)
+    -> Lobby primary gRPC (lobby-primary:50052)
     -> room lifecycle (create, join, get, start, leave)
+    -> Lobby backup replication (lobby-backup:8081)
 
 Gameplay flow:
   HTTP client
@@ -23,7 +24,9 @@ Gameplay flow:
     -> authoritative gameplay snapshot
 ```
 
-Lobby is fully implemented with in-memory room state and connected to the Gateway via grpc-gateway.
+Lobby is fully implemented with in-memory room state, connected to the Gateway
+via grpc-gateway, and replicated from a primary instance to a backup instance
+using ordered state snapshots.
 
 ## Implemented Structure
 
@@ -53,9 +56,10 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 | Monorepo structure | Implemented at repo root with service, internal, proto, gen and deployment boundaries. |
 | Gateway service | Implemented as HTTP entrypoint with healthcheck and grpc-gateway proxy to Game and Lobby. |
 | Game service | Implemented as separate gRPC service with authoritative room-scoped gameplay: server-clock movement, chests, weapons, damage, safe zone and ranking behavior. |
-| Lobby service | Implemented with in-memory room state: CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom. 24 unit tests. |
+| Lobby service | Implemented with in-memory room state: CreateRoom, JoinRoom, GetRoom, StartRoom, LeaveRoom and SetReady. |
+| Lobby replication | Implemented primary-backup replication with monotonic versions, ordered snapshot application and rollback on failed backup confirmation. |
 | Per-service containers | Implemented with one Dockerfile per service. |
-| Docker Compose | Implemented in `deployments/docker-compose.yml`; Gateway depends on healthy Game and Lobby. |
+| Docker Compose | Implemented in `deployments/docker-compose.yml`; Gateway depends on healthy Game and Lobby primary; Lobby primary depends on healthy Lobby backup. |
 | Go version | Updated to Go 1.25.0 to support the selected grpc-gateway dependency. |
 | Gateway -> Lobby room flow | Implemented. Gateway proxies HTTP to Lobby gRPC via grpc-gateway with HTTP annotations. |
 
@@ -65,7 +69,8 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 | --- | --- | --- |
 | Gateway | Public HTTP edge | `GET /healthz`, WebSocket `GET /v1/match/ws`, `POST /v1/match/stream`, `POST /v1/rooms`, `POST /v1/rooms/{id}/join`, `GET /v1/rooms/{id}`, `POST /v1/rooms/{id}/start`, `POST /v1/rooms/{id}/leave` |
 | Game | Authoritative gameplay backend | gRPC `GameService.StreamMatch`, `StartMatch`, `PushInput`, `WatchMatch` (server-clock snapshot stream), health `GET /healthz` on `:8082` |
-| Lobby | Room lifecycle manager | gRPC `LobbyService.CreateRoom`, `JoinRoom`, `GetRoom`, `StartRoom`, `LeaveRoom`, health `GET /healthz` on `:8081` |
+| Lobby primary | Room lifecycle manager | gRPC `LobbyService.CreateRoom`, `JoinRoom`, `GetRoom`, `StartRoom`, `LeaveRoom`, `SetReady`, health `GET /healthz` on `:8081` |
+| Lobby backup | Room state replica | Internal HTTP `POST /replication/lobby-state`, health `GET /healthz` on `:8081`; public Lobby writes are read-only on this role |
 
 ## Realtime Pipeline (Phase 4)
 
@@ -81,9 +86,9 @@ Lobby is fully implemented with in-memory room state and connected to the Gatewa
 
 ## Remaining Gaps
 
-- Add observability, correlated request IDs, stress testing and failure handling.
+- Add automatic Gateway failover from Lobby primary to Lobby backup.
 - Add structured logging with request_id, room_id, player_id across services.
-- Robust reconnection and disconnect handling that keeps matches alive (Phase 7).
+- Persist or replicate Game match state if fault tolerance during active matches is required.
 
 ## Validation Evidence
 

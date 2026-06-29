@@ -13,7 +13,9 @@ provedor VPS real e a validacao remota foram separadas para a Fase 8 em
 - Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`
 - Jaeger: `http://localhost:16686/search`
 - Game gRPC interno: `game:50051`
-- Lobby gRPC interno: `lobby:50052`
+- Lobby primario gRPC interno: `lobby-primary:50052`
+- Lobby backup gRPC interno: `lobby-backup:50052`
+- Replicacao interna do Lobby: `http://lobby-backup:8081/replication/lobby-state`
 
 ## Execução Local
 
@@ -72,8 +74,8 @@ go run ./tools/stress50 -gateway http://<ip-ou-dominio>:8080 -players 50 -durati
 
 - `/healthz` indica que o processo HTTP do serviço está vivo.
 - `/readyz` indica que o serviço está pronto para receber tráfego.
-- Gateway só fica ready quando consegue abrir TCP para Game e Lobby.
-- Lobby só fica ready quando seu gRPC está ouvindo e o Game está acessível.
+- Gateway só fica ready quando consegue abrir TCP para Game e Lobby primario.
+- Lobby primario e Lobby backup ficam ready quando seu gRPC esta ouvindo e o Game esta acessivel.
 - Game fica ready quando o listener gRPC foi aberto.
 
 Para demonstrar degradação controlada:
@@ -88,9 +90,16 @@ O Gateway/Lobby devem responder `503` em `/readyz` enquanto a dependência estiv
 fora, sem derrubar o processo. O teste de unidade do Lobby também cobre a falha
 de `StartMatch`: a sala volta para `WAITING` quando o Game não confirma a partida.
 
+Para demonstrar a replicacao primario-backup do Lobby, crie uma sala pelo Gateway
+e consulte as metricas `voxel_lobby_replication_version` e
+`voxel_lobby_replication_events_total` no Prometheus. Se o `lobby-backup` estiver
+fora, escritas no `lobby-primary` retornam erro em vez de confirmar uma sala que
+nao foi replicada.
+
 ## Estado e Stateless
 
-Gateway e frontend são stateless. Lobby e Game mantêm estado em memória, suficiente
-para o escopo acadêmico de partidas efêmeras; reiniciar esses serviços perde salas
-e partidas atuais, mas não corrompe dados persistentes porque o projeto não usa
-persistência durável nesta entrega.
+Gateway e frontend são stateless. O estado de salas do Lobby fica em memoria e e
+replicado do primario para o backup por snapshots versionados. O Game ainda mantem
+partidas em memoria sem replicacao, suficiente para o escopo academico de partidas
+efemeras; reiniciar o Game perde partidas atuais, mas nao corrompe dados
+persistentes porque o projeto nao usa persistencia duravel nesta entrega.

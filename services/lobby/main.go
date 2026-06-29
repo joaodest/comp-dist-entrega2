@@ -25,6 +25,8 @@ func main() {
 	grpcAddr := env("GRPC_ADDR", ":50052")
 	healthAddr := env("HEALTH_ADDR", ":8081")
 	gameAddr := env("GAME_GRPC_ADDR", "localhost:50051")
+	replicationRole := lobby.ParseReplicationRole(env("LOBBY_REPLICATION_ROLE", string(lobby.ReplicationStandalone)))
+	replicaURL := env("LOBBY_REPLICA_URL", "")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -46,8 +48,15 @@ func main() {
 	}
 	defer func() { _ = gameConn.Close() }()
 
+	var replicator lobby.StateReplicator
+	if replicationRole == lobby.ReplicationPrimary && replicaURL != "" {
+		replicator = lobby.NewHTTPReplicator(replicaURL, 2*time.Second)
+	}
+
 	starter := &gameMatchStarter{client: matchv1.NewGameServiceClient(gameConn)}
-	lobbyServer := lobby.NewServer().WithMatchStarter(starter)
+	lobbyServer := lobby.NewServer().
+		WithMatchStarter(starter).
+		WithReplication(replicationRole, replicator)
 
 	grpcServer := grpc.NewServer(observability.GRPCServerOption())
 	lobbyv1.RegisterLobbyServiceServer(grpcServer, lobbyServer)
@@ -58,7 +67,7 @@ func main() {
 	}
 
 	ready := &atomic.Bool{}
-	health := healthServer(healthAddr, ready, gameAddr)
+	health := healthServer(healthAddr, ready, gameAddr, lobbyServer)
 	go func() {
 		log.Printf("lobby health listening on %s", healthAddr)
 		if err := health.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -72,7 +81,7 @@ func main() {
 		_ = health.Shutdown(context.Background())
 	}()
 
-	log.Printf("lobby grpc listening on %s (game at %s)", grpcAddr, gameAddr)
+	log.Printf("lobby grpc listening on %s (game at %s, replication role %s)", grpcAddr, gameAddr, replicationRole)
 	ready.Store(true)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("lobby grpc server failed: %v", err)
@@ -104,11 +113,12 @@ func (g *gameMatchStarter) StartMatch(ctx context.Context, roomID string, maxPla
 	return err
 }
 
-func healthServer(addr string, ready *atomic.Bool, gameAddr string) *http.Server {
+func healthServer(addr string, ready *atomic.Bool, gameAddr string, lobbyServer *lobby.Server) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	mux.HandleFunc("/replication/lobby-state", lobbyServer.HandleReplicationHTTP)
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if !ready.Load() {
 			http.Error(w, "not ready", http.StatusServiceUnavailable)

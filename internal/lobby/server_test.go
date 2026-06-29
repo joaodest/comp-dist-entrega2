@@ -583,6 +583,16 @@ func (f *fakeStarter) StartMatch(_ context.Context, roomID string, maxPlayers in
 	return f.err
 }
 
+type fakeReplicator struct {
+	events []ReplicationEvent
+	err    error
+}
+
+func (f *fakeReplicator) Replicate(_ context.Context, event ReplicationEvent) error {
+	f.events = append(f.events, event)
+	return f.err
+}
+
 func TestStartRoomTriggersMatchStart(t *testing.T) {
 	starter := &fakeStarter{}
 	srv := NewServer().WithMatchStarter(starter)
@@ -656,6 +666,63 @@ func TestStartRoomMatchStartFailureRevertsToWaiting(t *testing.T) {
 	if resp.Status != lobbyv1.RoomStatus_ROOM_STATUS_WAITING {
 		t.Fatalf("status = %v, want WAITING after failed match start", resp.Status)
 	}
+}
+
+func TestPrimaryReplicatesRoomWritesToBackup(t *testing.T) {
+	replicator := &fakeReplicator{}
+	primary := NewServer().WithReplication(ReplicationPrimary, replicator)
+	backup := NewServer().WithReplication(ReplicationBackup, nil)
+	ctx := context.Background()
+
+	created := mustCreateRoom(t, primary, ctx, "Ana", 4)
+	if len(replicator.events) != 1 {
+		t.Fatalf("replication events = %d, want 1", len(replicator.events))
+	}
+	if replicator.events[0].Version != 1 {
+		t.Fatalf("replication version = %d, want 1", replicator.events[0].Version)
+	}
+
+	if err := backup.ApplyReplicationEvent(ctx, replicator.events[0]); err != nil {
+		t.Fatalf("ApplyReplicationEvent failed: %v", err)
+	}
+	got, err := backup.GetRoom(ctx, &lobbyv1.GetRoomRequest{RoomId: created.RoomId})
+	if err != nil {
+		t.Fatalf("backup GetRoom failed: %v", err)
+	}
+	if got.OwnerId != created.OwnerId || got.Players[0].PlayerName != "Ana" {
+		t.Fatalf("backup room not replicated correctly: %+v", got)
+	}
+
+	_, err = backup.JoinRoom(ctx, &lobbyv1.JoinRoomRequest{RoomId: created.RoomId, PlayerName: "Bruno"})
+	assertCode(t, err, codes.FailedPrecondition)
+}
+
+func TestBackupRejectsOutOfOrderReplicationEvent(t *testing.T) {
+	backup := NewServer().WithReplication(ReplicationBackup, nil)
+	ctx := context.Background()
+
+	err := backup.ApplyReplicationEvent(ctx, ReplicationEvent{
+		Version: 2,
+		Snapshot: ReplicationSnapshot{
+			NextID: 1,
+		},
+	})
+	assertCode(t, err, codes.FailedPrecondition)
+}
+
+func TestPrimaryRollsBackWriteWhenReplicationFails(t *testing.T) {
+	replicator := &fakeReplicator{err: errors.New("backup unavailable")}
+	primary := NewServer().WithReplication(ReplicationPrimary, replicator)
+	ctx := context.Background()
+
+	_, err := primary.CreateRoom(ctx, &lobbyv1.CreateRoomRequest{OwnerName: "Ana"})
+	assertCode(t, err, codes.Unavailable)
+
+	if primary.ReplicationVersion() != 0 {
+		t.Fatalf("replication version = %d, want 0 after rollback", primary.ReplicationVersion())
+	}
+	_, err = primary.GetRoom(ctx, &lobbyv1.GetRoomRequest{RoomId: "room-1"})
+	assertCode(t, err, codes.NotFound)
 }
 
 func assertCode(t *testing.T, err error, expected codes.Code) {

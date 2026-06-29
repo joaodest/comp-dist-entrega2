@@ -6,7 +6,7 @@ services:
     environment:
       HTTP_ADDR: :8080
       GAME_GRPC_ADDR: game:50051
-      LOBBY_GRPC_ADDR: lobby:50052
+      LOBBY_GRPC_ADDR: lobby-primary:50052
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME: voxel-gateway
     ports:
@@ -14,7 +14,7 @@ services:
     depends_on:
       game:
         condition: service_healthy
-      lobby:
+      lobby-primary:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/readyz"]
@@ -55,7 +55,7 @@ services:
       timeout: 3s
       retries: 10
 
-  lobby:
+  lobby-backup:
     build:
       context: ..
       dockerfile: services/lobby/Dockerfile
@@ -63,10 +63,37 @@ services:
       GRPC_ADDR: :50052
       HEALTH_ADDR: :8081
       GAME_GRPC_ADDR: game:50051
+      LOBBY_REPLICATION_ROLE: backup
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME: voxel-lobby
+      OTEL_SERVICE_NAME: voxel-lobby-backup
     depends_on:
       game:
+        condition: service_healthy
+    expose:
+      - "50052"
+      - "8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  lobby-primary:
+    build:
+      context: ..
+      dockerfile: services/lobby/Dockerfile
+    environment:
+      GRPC_ADDR: :50052
+      HEALTH_ADDR: :8081
+      GAME_GRPC_ADDR: game:50051
+      LOBBY_REPLICATION_ROLE: primary
+      LOBBY_REPLICA_URL: http://lobby-backup:8081/replication/lobby-state
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: voxel-lobby-primary
+    depends_on:
+      game:
+        condition: service_healthy
+      lobby-backup:
         condition: service_healthy
     expose:
       - "50052"
@@ -90,7 +117,9 @@ services:
         condition: service_healthy
       game:
         condition: service_healthy
-      lobby:
+      lobby-primary:
+        condition: service_healthy
+      lobby-backup:
         condition: service_healthy
 
   grafana:
