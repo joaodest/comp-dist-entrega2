@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	arenaHalfSize        = float32(50)
+	arenaHalfSize        = float32(100)
 	maxMovePerTick       = float32(2.5)
 	chestOpenRange       = float32(2.25)
-	initialSafeZoneRange = float32(45)
-	finalSafeZoneRange   = float32(5)
+	initialSafeZoneRange = float32(90)
+	finalSafeZoneRange   = float32(8)
 	maxMatchTicks        = int64(5 * 60 * tickHz)
 	safeZoneDamage       = int32(8)
 	maxHealth            = int32(100)
@@ -58,12 +58,12 @@ var chestTemplates = []chestState{
 	{id: "chest-01", pos: vec2{3, 0}, weapon: weaponRifle},
 	{id: "chest-02", pos: vec2{-3, 0}, weapon: weaponShotgun},
 	{id: "chest-03", pos: vec2{0, 3}, weapon: weaponPistol},
-	{id: "chest-04", pos: vec2{10, 10}, weapon: weaponRifle},
-	{id: "chest-05", pos: vec2{-10, 10}, weapon: weaponShotgun},
-	{id: "chest-06", pos: vec2{10, -10}, weapon: weaponPistol},
-	{id: "chest-07", pos: vec2{-10, -10}, weapon: weaponRifle},
-	{id: "chest-08", pos: vec2{18, 0}, weapon: weaponShotgun},
-	{id: "chest-09", pos: vec2{0, -18}, weapon: weaponPistol},
+	{id: "chest-04", pos: vec2{28, 28}, weapon: weaponRifle},
+	{id: "chest-05", pos: vec2{-28, 28}, weapon: weaponShotgun},
+	{id: "chest-06", pos: vec2{28, -28}, weapon: weaponPistol},
+	{id: "chest-07", pos: vec2{-28, -28}, weapon: weaponRifle},
+	{id: "chest-08", pos: vec2{50, 0}, weapon: weaponShotgun},
+	{id: "chest-09", pos: vec2{0, -50}, weapon: weaponPistol},
 }
 
 type Server struct {
@@ -507,7 +507,7 @@ func spawnFor(index int) vec2 {
 		return spawnPoints[index]
 	}
 	angle := float64(index) * 2 * math.Pi / 50
-	ring := float32(18 + (index/len(spawnPoints))*6)
+	ring := float32(40 + (index/len(spawnPoints))*12)
 	return vec2{x: ring * float32(math.Cos(angle)), y: ring * float32(math.Sin(angle))}
 }
 

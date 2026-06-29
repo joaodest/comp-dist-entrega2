@@ -52,18 +52,22 @@ const WEAPON_GUN: Record<string, { len: number; w: number }> = {
   shotgun: { len: 1.1 * PX, w: 7 },
 };
 
-// Mapa decorativo (coordenadas de mundo -50..50). O backend nao tem terreno;
+// Mapa decorativo (coordenadas de mundo -100..100). O backend nao tem terreno;
 // estes elementos sao puramente visuais do cliente.
 const TREES: [number, number, number][] = [
-  [-33, 31, 5], [29, 33, 5], [-31, -29, 5], [35, -27, 5],
-  [-41, 6, 4.2], [41, -9, 4.2], [13, 41, 4], [-15, -41, 4],
-  [39, 19, 4.5], [-39, -13, 4.5], [21, -37, 4], [-23, 37, 4],
+  [-66, 62, 5], [58, 66, 5], [-62, -58, 5], [70, -54, 5],
+  [-82, 12, 4.2], [82, -18, 4.2], [26, 82, 4], [-30, -82, 4],
+  [78, 38, 4.5], [-78, -26, 4.5], [42, -74, 4], [-46, 74, 4],
+  [-20, 40, 4], [40, -40, 4.3], [-44, -44, 4], [18, -20, 3.8],
+  [-90, -68, 4.2], [90, 70, 4.2], [4, -90, 4], [-8, 90, 4],
 ];
 const ROCKS: [number, number, number][] = [
-  [-9, 13, 2.2], [11, -7, 2.4], [1, -23, 2], [-25, -3, 1.8], [27, 11, 2.2], [7, 27, 1.8],
+  [-18, 26, 2.2], [22, -14, 2.4], [2, -46, 2], [-50, -6, 1.8], [54, 22, 2.2], [14, 54, 1.8],
+  [-60, 40, 2], [60, -50, 2.2], [-30, 70, 1.9], [70, 30, 2.1],
 ];
 const BUSHES: [number, number, number][] = [
-  [-18, 24, 1.6], [24, -22, 1.7], [-28, 14, 1.4], [16, 18, 1.5], [-12, -16, 1.6], [33, 4, 1.4], [-6, 34, 1.3], [9, -32, 1.5],
+  [-36, 48, 1.6], [48, -44, 1.7], [-56, 28, 1.4], [32, 36, 1.5], [-24, -32, 1.6], [66, 8, 1.4], [-12, 68, 1.3], [18, -64, 1.5],
+  [40, 60, 1.5], [-64, -40, 1.6], [-80, 56, 1.5], [80, -36, 1.5], [10, 28, 1.3], [-10, -10, 1.4],
 ];
 
 function blobPoints(cx: number, cy: number, r: number, bumps: number, amp: number, phase = 0): Phaser.Math.Vector2[] {
@@ -140,9 +144,10 @@ export function drawTerrain(g: Phaser.GameObjects.Graphics) {
 
   // manchas de grama (claras e escuras) para dar textura
   for (const [wx, wy, wr, col, al] of [
-    [-20, 18, 8, C.grassDark, 0.5], [22, -16, 7, C.grassDark, 0.5], [-6, -30, 7, C.grassLite, 0.4],
-    [30, 28, 6, C.grassDark, 0.45], [-34, -20, 6, C.grassLite, 0.4], [18, 36, 6, C.grassDark, 0.4],
-    [-40, 26, 7, C.grassLite, 0.35], [40, -32, 6, C.grassDark, 0.4],
+    [-40, 36, 14, C.grassDark, 0.5], [44, -32, 13, C.grassDark, 0.5], [-12, -60, 13, C.grassLite, 0.4],
+    [60, 56, 12, C.grassDark, 0.45], [-68, -40, 12, C.grassLite, 0.4], [36, 72, 12, C.grassDark, 0.4],
+    [-80, 52, 13, C.grassLite, 0.35], [80, -64, 12, C.grassDark, 0.4],
+    [-30, -20, 11, C.grassDark, 0.4], [24, 18, 10, C.grassLite, 0.35], [72, 8, 11, C.grassDark, 0.4],
   ] as const) {
     const p = worldToPx(wx, wy);
     g.fillStyle(col, al);
@@ -158,8 +163,8 @@ export function drawTerrain(g: Phaser.GameObjects.Graphics) {
 
   // rio (polilinha ondulada vertical)
   const river: Phaser.Math.Vector2[] = [];
-  for (let wy = 54; wy >= -54; wy -= 4) {
-    const wx = 6 * Math.sin(wy / 13);
+  for (let wy = 108; wy >= -108; wy -= 4) {
+    const wx = 10 * Math.sin(wy / 18);
     const p = worldToPx(wx, wy);
     river.push(new Phaser.Math.Vector2(p.x, p.y));
   }
@@ -177,10 +182,10 @@ export function drawTerrain(g: Phaser.GameObjects.Graphics) {
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   };
-  for (let i = 0; i < 70; i++) {
-    const wx = (rnd() - 0.5) * 96;
-    const wy = (rnd() - 0.5) * 96;
-    if (Math.abs(6 * Math.sin(wy / 13) - wx) < 8) continue; // evita o rio
+  for (let i = 0; i < 220; i++) {
+    const wx = (rnd() - 0.5) * 196;
+    const wy = (rnd() - 0.5) * 196;
+    if (Math.abs(10 * Math.sin(wy / 18) - wx) < 12) continue; // evita o rio
     const p = worldToPx(wx, wy);
     flower(g, p.x, p.y, palette[i % palette.length]);
   }
