@@ -4,9 +4,11 @@
 // armas direcionais) do GameState, desenhadas a cada frame.
 import Phaser from 'phaser';
 import type { GameState } from './types';
-import { ARENA_HALF, PX, WORLD_PX, worldToPx } from './config';
+import { ARENA_HALF, PX, ROCK_OBSTACLES, WORLD_PX, worldToPx } from './config';
 
 type Heading = { x: number; y: number };
+type GrassPatch = { wx: number; wy: number; wr: number; color: number; alpha: number };
+type CoverPatch = { wx: number; wy: number; wr: number };
 
 export const GRASS = 0x5e9b46;
 const OUT = 0x15140f;
@@ -52,6 +54,28 @@ const WEAPON_GUN: Record<string, { len: number; w: number }> = {
   shotgun: { len: 1.1 * PX, w: 7 },
 };
 
+// Manchas decorativas de grama. Elas nao contam como camuflagem; a cobertura
+// vem dos arbustos/folhagens desenhados mais abaixo no mapa.
+const GRASS_PATCHES: GrassPatch[] = [
+  { wx: -40, wy: 36, wr: 14, color: C.grassDark, alpha: 0.5 },
+  { wx: 44, wy: -32, wr: 13, color: C.grassDark, alpha: 0.5 },
+  { wx: -12, wy: -60, wr: 13, color: C.grassLite, alpha: 0.4 },
+  { wx: 60, wy: 56, wr: 12, color: C.grassDark, alpha: 0.45 },
+  { wx: -68, wy: -40, wr: 12, color: C.grassLite, alpha: 0.4 },
+  { wx: 36, wy: 72, wr: 12, color: C.grassDark, alpha: 0.4 },
+  { wx: -80, wy: 52, wr: 13, color: C.grassLite, alpha: 0.35 },
+  { wx: 80, wy: -64, wr: 12, color: C.grassDark, alpha: 0.4 },
+  { wx: -30, wy: -20, wr: 11, color: C.grassDark, alpha: 0.4 },
+  { wx: 24, wy: 18, wr: 10, color: C.grassLite, alpha: 0.35 },
+  { wx: 72, wy: 8, wr: 11, color: C.grassDark, alpha: 0.4 },
+  { wx: 96, wy: 82, wr: 13, color: C.grassDark, alpha: 0.4 },
+  { wx: -98, wy: 82, wr: 12, color: C.grassLite, alpha: 0.36 },
+  { wx: 102, wy: -82, wr: 13, color: C.grassLite, alpha: 0.34 },
+  { wx: -100, wy: -82, wr: 13, color: C.grassDark, alpha: 0.38 },
+  { wx: 8, wy: 104, wr: 12, color: C.grassLite, alpha: 0.34 },
+  { wx: -18, wy: -104, wr: 12, color: C.grassDark, alpha: 0.36 },
+];
+
 // Mapa decorativo (coordenadas de mundo -ARENA_HALF..ARENA_HALF). O backend nao tem terreno;
 // estes elementos sao puramente visuais do cliente.
 const TREES: [number, number, number][] = [
@@ -64,18 +88,21 @@ const TREES: [number, number, number][] = [
   [-104, 36, 3.8], [104, -38, 3.9], [34, 108, 3.7], [-38, -108, 3.8],
   [98, 12, 3.6], [-98, -10, 3.6], [12, -108, 3.5], [-14, 108, 3.5],
 ];
-const ROCKS: [number, number, number][] = [
-  [-18, 26, 2.2], [22, -14, 2.4], [2, -46, 2], [-50, -6, 1.8], [54, 22, 2.2], [14, 54, 1.8],
-  [-60, 40, 2], [60, -50, 2.2], [-30, 70, 1.9], [70, 30, 2.1],
-  [-96, 70, 2], [94, -72, 2.1], [78, 92, 1.9], [-82, -94, 2.1],
-  [104, 46, 1.8], [-106, -42, 1.9],
-];
 const BUSHES: [number, number, number][] = [
   [-36, 48, 1.6], [48, -44, 1.7], [-56, 28, 1.4], [32, 36, 1.5], [-24, -32, 1.6], [66, 8, 1.4], [-12, 68, 1.3], [18, -64, 1.5],
   [40, 60, 1.5], [-64, -40, 1.6], [-80, 56, 1.5], [80, -36, 1.5], [10, 28, 1.3], [-10, -10, 1.4],
   [96, 68, 1.5], [-96, 68, 1.5], [96, -66, 1.5], [-96, -66, 1.5],
   [68, 100, 1.4], [-68, -100, 1.4], [112, 6, 1.3], [-112, -8, 1.3],
 ];
+
+const COVER_PATCHES: CoverPatch[] = [
+  ...TREES.map(([wx, wy, wr]) => ({ wx, wy, wr: wr * 0.95 })),
+  ...BUSHES.map(([wx, wy, wr]) => ({ wx, wy, wr: wr * 1.25 })),
+];
+
+export function isInFoliageCover(wx: number, wy: number): boolean {
+  return COVER_PATCHES.some((patch) => Math.hypot(wx - patch.wx, wy - patch.wy) <= patch.wr);
+}
 
 function blobPoints(cx: number, cy: number, r: number, bumps: number, amp: number, phase = 0): Phaser.Math.Vector2[] {
   const n = Math.max(28, bumps * 6);
@@ -88,8 +115,8 @@ function blobPoints(cx: number, cy: number, r: number, bumps: number, amp: numbe
   return pts;
 }
 
-function shadow(g: Phaser.GameObjects.Graphics, px: number, py: number, r: number) {
-  g.fillStyle(0x0c1a0c, 0.18);
+function shadow(g: Phaser.GameObjects.Graphics, px: number, py: number, r: number, opacity = 1) {
+  g.fillStyle(0x0c1a0c, 0.18 * opacity);
   g.fillEllipse(px, py + r * 0.5, r * 2.05, r * 1.15);
 }
 
@@ -150,16 +177,9 @@ export function drawTerrain(g: Phaser.GameObjects.Graphics) {
   g.fillRect(-400, -400, WORLD_PX + 800, WORLD_PX + 800);
 
   // manchas de grama (claras e escuras) para dar textura
-  for (const [wx, wy, wr, col, al] of [
-    [-40, 36, 14, C.grassDark, 0.5], [44, -32, 13, C.grassDark, 0.5], [-12, -60, 13, C.grassLite, 0.4],
-    [60, 56, 12, C.grassDark, 0.45], [-68, -40, 12, C.grassLite, 0.4], [36, 72, 12, C.grassDark, 0.4],
-    [-80, 52, 13, C.grassLite, 0.35], [80, -64, 12, C.grassDark, 0.4],
-    [-30, -20, 11, C.grassDark, 0.4], [24, 18, 10, C.grassLite, 0.35], [72, 8, 11, C.grassDark, 0.4],
-    [96, 82, 13, C.grassDark, 0.4], [-98, 82, 12, C.grassLite, 0.36], [102, -82, 13, C.grassLite, 0.34],
-    [-100, -82, 13, C.grassDark, 0.38], [8, 104, 12, C.grassLite, 0.34], [-18, -104, 12, C.grassDark, 0.36],
-  ] as const) {
+  for (const { wx, wy, wr, color, alpha } of GRASS_PATCHES) {
     const p = worldToPx(wx, wy);
-    g.fillStyle(col, al);
+    g.fillStyle(color, alpha);
     g.fillPoints(blobPoints(p.x, p.y, wr * PX, 4, wr * PX * 0.25, wx), true);
   }
 
@@ -200,7 +220,7 @@ export function drawTerrain(g: Phaser.GameObjects.Graphics) {
   }
 
   for (const [x, y, r] of BUSHES) bush(g, x, y, r);
-  for (const [x, y, r] of ROCKS) rock(g, x, y, r);
+  for (const { wx, wy, wr } of ROCK_OBSTACLES) rock(g, wx, wy, wr);
   for (const [x, y, r] of TREES) tree(g, x, y, r);
 }
 
@@ -269,17 +289,25 @@ function drawChest(g: Phaser.GameObjects.Graphics, ch: GameState['chests'][numbe
   g.fillRect(p.x - 3, p.y - 3, 6, 6);
 }
 
-function healthBar(g: Phaser.GameObjects.Graphics, px: number, py: number, rad: number, hp: number) {
+function healthBar(g: Phaser.GameObjects.Graphics, px: number, py: number, rad: number, hp: number, opacity = 1) {
   const w = rad * 2.4;
   const h = 4.5;
   const x = px - w / 2;
   const y = py - rad - 11;
   const k = Math.max(0, Math.min(1, hp / 100));
-  g.fillStyle(0x000000, 0.45);
+  g.fillStyle(0x000000, 0.45 * opacity);
   g.fillRoundedRect(x - 1, y - 1, w + 2, h + 2, 3);
   const col = k > 0.5 ? 0x2fbf5e : k > 0.25 ? 0xf5d76e : 0xff5d6c;
-  g.fillStyle(col, 1);
+  g.fillStyle(col, opacity);
   g.fillRoundedRect(x, y, Math.max(2, w * k), h, 2.5);
+}
+
+function drawCamouflageEffect(g: Phaser.GameObjects.Graphics, px: number, py: number, rad: number, t: number) {
+  const pulse = 0.45 + 0.35 * Math.sin(t / 260);
+  g.fillStyle(C.grassLite, 0.1 + pulse * 0.05);
+  g.fillCircle(px, py, rad * 1.85);
+  g.lineStyle(2, 0xe1ffd4, 0.18 + pulse * 0.08);
+  g.strokeCircle(px, py, rad * 1.45);
 }
 
 function drawPlayer(
@@ -292,16 +320,17 @@ function drawPlayer(
   weapon: string,
   heading: Heading,
   hp: number,
+  opacity = 1,
 ) {
-  shadow(g, px, py, rad);
+  shadow(g, px, py, rad, opacity);
 
   if (!alive) {
-    g.fillStyle(C.dead, 0.85);
-    g.lineStyle(3, OUT, 0.8);
+    g.fillStyle(C.dead, 0.85 * opacity);
+    g.lineStyle(3, OUT, 0.8 * opacity);
     g.fillCircle(px, py, rad);
     g.strokeCircle(px, py, rad);
     // X marcando eliminado
-    g.lineStyle(3, 0x3a3d44, 0.9);
+    g.lineStyle(3, 0x3a3d44, 0.9 * opacity);
     const d = rad * 0.45;
     g.lineBetween(px - d, py - d, px + d, py + d);
     g.lineBetween(px - d, py + d, px + d, py - d);
@@ -317,20 +346,20 @@ function drawPlayer(
   const gy0 = py + hy * rad * 0.2;
   const gx1 = px + hx * (rad + gun.len);
   const gy1 = py + hy * (rad + gun.len);
-  g.lineStyle(gun.w + 2, OUT, 1);
+  g.lineStyle(gun.w + 2, OUT, opacity);
   g.lineBetween(gx0, gy0, gx1, gy1);
-  g.lineStyle(gun.w, WEAPON_COLOR[weapon] ?? 0x3a3f47, 1);
+  g.lineStyle(gun.w, WEAPON_COLOR[weapon] ?? 0x3a3f47, opacity);
   g.lineBetween(gx0, gy0, gx1, gy1);
   // ponta do cano
-  g.fillStyle(0x20242a, 1);
+  g.fillStyle(0x20242a, opacity);
   g.fillCircle(gx1, gy1, gun.w * 0.6);
 
   // corpo (camisa) + cabeca (pele)
-  g.fillStyle(you ? C.shirtYou : C.shirt, 1);
-  g.lineStyle(3.5, OUT, 1);
+  g.fillStyle(you ? C.shirtYou : C.shirt, opacity);
+  g.lineStyle(3.5, OUT, opacity);
   g.fillCircle(px, py, rad);
   g.strokeCircle(px, py, rad);
-  g.fillStyle(you ? C.skinYou : C.skin, 1);
+  g.fillStyle(you ? C.skinYou : C.skin, opacity);
   g.fillCircle(px, py, rad * 0.62);
 
   // olhos voltados para a direcao
@@ -338,16 +367,16 @@ function drawPlayer(
   const ey = py + hy * rad * 0.32;
   const perpX = -hy;
   const perpY = hx;
-  g.fillStyle(0x1a1c22, 1);
+  g.fillStyle(0x1a1c22, opacity);
   g.fillCircle(ex + perpX * rad * 0.26, ey + perpY * rad * 0.26, 2.1);
   g.fillCircle(ex - perpX * rad * 0.26, ey - perpY * rad * 0.26, 2.1);
 
   if (you) {
-    g.lineStyle(2.5, 0xffffff, 0.7);
+    g.lineStyle(2.5, 0xffffff, 0.7 * opacity);
     g.strokeCircle(px, py, rad + 4);
   }
 
-  healthBar(g, px, py, rad, hp);
+  healthBar(g, px, py, rad, hp, opacity);
 }
 
 export function drawWorld(
@@ -377,13 +406,19 @@ export function drawWorld(
     const rad = (you ? 1.05 : 0.92) * PX;
     const inZone = Math.hypot(p.x - s.safeZone.centerX, p.y - s.safeZone.centerY) <= s.safeZone.radius;
     const heading = headings.get(p.playerId) ?? { x: 1, y: 0 };
+    const camouflaged = p.isAlive && isInFoliageCover(p.x, p.y);
+
+    if (camouflaged && !you) continue;
+
+    const opacity = camouflaged && you ? 0.42 : 1;
+    if (camouflaged && you) drawCamouflageEffect(g, rp.x, rp.y, rad, t);
 
     if (p.isAlive && !inZone) {
       const pulse = 0.5 + 0.4 * Math.sin(t / 160);
-      g.lineStyle(3, C.danger, 0.5 + 0.4 * pulse);
+      g.lineStyle(3, C.danger, (0.5 + 0.4 * pulse) * opacity);
       g.strokeCircle(rp.x, rp.y, rad + 5);
     }
 
-    drawPlayer(g, rp.x, rp.y, rad, p.isAlive, you, p.weapon, heading, p.health);
+    drawPlayer(g, rp.x, rp.y, rad, p.isAlive, you, p.weapon, heading, p.health, opacity);
   }
 }

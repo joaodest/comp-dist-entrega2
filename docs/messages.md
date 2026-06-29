@@ -308,7 +308,7 @@ websocat 'ws://localhost:8080/v1/match/ws?room=room-1&player=player-1'
 | Zona segura | 108 → 10 | Encolhe linearmente; dano fora da zona: 8/tick. |
 | Fases da zona | 5 | `phase` avança a cada 900 ticks e fica limitado a `0..4`. |
 | Vida máxima | 100 | — |
-| Armas | pistol (18 / alc. 10), rifle (24 / alc. 16), shotgun (42 / alc. 5) | dano / alcance; cooldown 1–2 ticks. |
+| Armas | pistol (18 / alc. 10), rifle (24 / alc. 16), shotgun (42 / alc. 8) | dano / alcance; cooldown 1–2 ticks. |
 | Baús | 17 | Posições e armas fixas (`chest-01..17`). |
 
 ---

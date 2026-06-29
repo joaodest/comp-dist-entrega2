@@ -5,7 +5,17 @@ import type { RealtimeStatus } from './net';
 import { OfflineDriver, RealtimeClient } from './net';
 import { drawTerrain, drawWorld, GRASS } from './ioRender';
 import { Bullets } from './bullets';
-import { SEND_MS, WORLD_PX, worldToPx, PHASES, MAX_MATCH_TICKS, SERVER_TICK_HZ } from './config';
+import {
+  firstRockHit,
+  MAX_MATCH_TICKS,
+  PHASES,
+  rockBlocksLine,
+  SEND_MS,
+  SERVER_TICK_HZ,
+  weaponRangeUnits,
+  WORLD_PX,
+  worldToPx,
+} from './config';
 import { session } from './session';
 
 type Heading = { x: number; y: number };
@@ -125,16 +135,25 @@ export class GameScene extends Phaser.Scene {
   private tryLocalFire(input: PlayerInput) {
     const me = this.state?.players.find((p) => p.playerId === session.myId && p.isAlive);
     if (!me) return;
+    const range = weaponRangeUnits(me.weapon);
+    const from = { x: me.x, y: me.y };
     let to: { x: number; y: number } | undefined;
     if (input.targetPlayerId) {
       const tgt = this.state!.players.find((p) => p.playerId === input.targetPlayerId);
-      if (tgt) to = { x: tgt.x, y: tgt.y };
+      if (
+        tgt &&
+        Math.hypot(tgt.x - me.x, tgt.y - me.y) <= range &&
+        !rockBlocksLine(from, { x: tgt.x, y: tgt.y })
+      ) {
+        to = { x: tgt.x, y: tgt.y };
+      }
     }
     if (!to) {
-      const range = 14;
       to = { x: me.x + input.aimX * range, y: me.y + input.aimY * range };
     }
-    this.bullets.localFire({ x: me.x, y: me.y }, to, me.weapon, this.headings, session.myId);
+    const rockHit = firstRockHit(from, to);
+    if (rockHit) to = rockHit;
+    this.bullets.localFire(from, to, me.weapon, this.headings, session.myId, Boolean(rockHit));
   }
 
   private setStatus(status: RealtimeStatus) {
@@ -213,6 +232,7 @@ export class GameScene extends Phaser.Scene {
     if (!input.isAttacking || !this.state) return input;
     const me = this.state.players.find((p) => p.playerId === session.myId && p.isAlive);
     if (!me) return input;
+    const range = weaponRangeUnits(me.weapon);
 
     let nearest: { id: string; d: number; dx: number; dy: number } | null = null;
     for (const p of this.state.players) {
@@ -220,6 +240,8 @@ export class GameScene extends Phaser.Scene {
       const dx = p.x - me.x;
       const dy = p.y - me.y;
       const d = Math.hypot(dx, dy);
+      if (d > range) continue;
+      if (rockBlocksLine({ x: me.x, y: me.y }, { x: p.x, y: p.y })) continue;
       if (!nearest || d < nearest.d) nearest = { id: p.playerId, d, dx, dy };
     }
     if (!nearest || nearest.d <= 0) return input;

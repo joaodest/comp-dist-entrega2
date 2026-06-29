@@ -3,7 +3,7 @@
 // sequenciados e recebe snapshots publicados pelo relogio do servidor.
 // OfflineDriver: fallback local (mock) quando o backend nao esta acessivel.
 import type { GameState, PlayerInput, PlayerSnapshot } from './types';
-import { ARENA_HALF, matchWsUrl, SEND_MS, SERVER_TICK_HZ } from './config';
+import { ARENA_HALF, matchWsUrl, moveWithRockCollision, SEND_MS, SERVER_TICK_HZ } from './config';
 import { session } from './session';
 import { buildSnapshot, rankPlayers } from './mock';
 
@@ -134,8 +134,15 @@ export class OfflineDriver {
     const mag = Math.hypot(input.moveX, input.moveY);
     if (mag > 0.01) {
       const stepLen = Math.min(2.5, mag * 2.5);
-      this.px = clamp(this.px + (input.moveX / mag) * stepLen, -ARENA_HALF, ARENA_HALF);
-      this.py = clamp(this.py + (input.moveY / mag) * stepLen, -ARENA_HALF, ARENA_HALF);
+      const next = moveWithRockCollision(
+        { x: this.px, y: this.py },
+        {
+          x: clamp(this.px + (input.moveX / mag) * stepLen, -ARENA_HALF, ARENA_HALF),
+          y: clamp(this.py + (input.moveY / mag) * stepLen, -ARENA_HALF, ARENA_HALF),
+        },
+      );
+      this.px = next.x;
+      this.py = next.y;
     }
     const base = buildSnapshot(this.tick);
     const me: PlayerSnapshot = {

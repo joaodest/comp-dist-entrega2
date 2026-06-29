@@ -188,6 +188,41 @@ func TestServerStreamMatchClampsMovementAndIgnoresStaleInput(t *testing.T) {
 	}
 }
 
+func TestServerStreamMatchBlocksMovementIntoRock(t *testing.T) {
+	server := NewServer()
+	rock := rockObstacles[0]
+	start := vec2{x: rock.pos.x - rock.radius - playerCollisionRadius - 0.75, y: rock.pos.y}
+
+	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{
+		PlayerId:      "blocked",
+		InputSequence: 1,
+	}); err != nil {
+		t.Fatalf("join failed: %v", err)
+	}
+
+	server.mu.Lock()
+	server.matches[globalMatchKey].players["blocked"].pos = start
+	server.mu.Unlock()
+
+	state, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{
+		PlayerId:      "blocked",
+		MoveX:         maxMovePerTick,
+		InputSequence: 2,
+	})
+	if err != nil {
+		t.Fatalf("StreamMatch returned error: %v", err)
+	}
+
+	player := findPlayer(t, state, "blocked")
+	pos := vec2{x: player.X, y: player.Y}
+	if hasRockCollision(pos, playerCollisionRadius) {
+		t.Fatalf("player moved inside rock hitbox at (%v,%v)", player.X, player.Y)
+	}
+	if player.X >= rock.pos.x-rock.radius-playerCollisionRadius {
+		t.Fatalf("player crossed rock boundary: X = %v", player.X)
+	}
+}
+
 func TestServerStreamMatchOpensChestAndEquipsWeapon(t *testing.T) {
 	server := NewServer()
 
@@ -212,6 +247,44 @@ func TestServerStreamMatchOpensChestAndEquipsWeapon(t *testing.T) {
 	}
 	if chest.OpenedByPlayerId != "looter" {
 		t.Fatalf("chest opened by = %q, want looter", chest.OpenedByPlayerId)
+	}
+}
+
+func TestServerStreamMatchRockBlocksBullets(t *testing.T) {
+	server := NewServer()
+	rock := rockObstacles[0]
+
+	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{PlayerId: "attacker", InputSequence: 1}); err != nil {
+		t.Fatalf("attacker join failed: %v", err)
+	}
+	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{PlayerId: "target", InputSequence: 1}); err != nil {
+		t.Fatalf("target join failed: %v", err)
+	}
+
+	server.mu.Lock()
+	match := server.matches[globalMatchKey]
+	match.players["attacker"].weapon = weaponRifle
+	match.players["attacker"].pos = vec2{rock.pos.x - 6, rock.pos.y}
+	match.players["target"].pos = vec2{rock.pos.x + 6, rock.pos.y}
+	server.mu.Unlock()
+
+	state, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{
+		PlayerId:       "attacker",
+		IsAttacking:    true,
+		TargetPlayerId: "target",
+		InputSequence:  2,
+	})
+	if err != nil {
+		t.Fatalf("attack failed: %v", err)
+	}
+
+	attacker := findPlayer(t, state, "attacker")
+	target := findPlayer(t, state, "target")
+	if attacker.DamageDealt != 0 {
+		t.Fatalf("damage dealt through rock = %d, want 0", attacker.DamageDealt)
+	}
+	if target.Health != maxHealth || target.DamageTaken != 0 {
+		t.Fatalf("target after blocked shot = health %d damageTaken %d, want %d/0", target.Health, target.DamageTaken, maxHealth)
 	}
 }
 
@@ -269,6 +342,47 @@ func TestServerStreamMatchAccountsDamageEliminationAndRanking(t *testing.T) {
 	}
 	if state.Ranking[1].PlayerId != "target" || state.Ranking[1].Place != 2 {
 		t.Fatalf("second ranking entry = %+v, want target in second place", state.Ranking[1])
+	}
+}
+
+func TestServerStreamMatchShotgunDamagesCloseTarget(t *testing.T) {
+	server := NewServer()
+
+	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{PlayerId: "attacker", InputSequence: 1}); err != nil {
+		t.Fatalf("attacker join failed: %v", err)
+	}
+	if _, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{PlayerId: "target", InputSequence: 1}); err != nil {
+		t.Fatalf("target join failed: %v", err)
+	}
+
+	server.mu.Lock()
+	match := server.matches[globalMatchKey]
+	match.players["attacker"].weapon = weaponShotgun
+	match.players["attacker"].pos = vec2{0, 0}
+	match.players["target"].pos = vec2{6, 0}
+	server.mu.Unlock()
+
+	state, err := server.StreamMatch(context.Background(), &matchv1.PlayerInput{
+		PlayerId:       "attacker",
+		IsAttacking:    true,
+		TargetPlayerId: "target",
+		InputSequence:  2,
+	})
+	if err != nil {
+		t.Fatalf("shotgun attack failed: %v", err)
+	}
+
+	attacker := findPlayer(t, state, "attacker")
+	target := findPlayer(t, state, "target")
+	wantDamage := weaponProfiles[weaponShotgun].damage
+	if attacker.DamageDealt != wantDamage {
+		t.Fatalf("shotgun damage dealt = %d, want %d", attacker.DamageDealt, wantDamage)
+	}
+	if target.Health != maxHealth-wantDamage {
+		t.Fatalf("target health = %d, want %d", target.Health, maxHealth-wantDamage)
+	}
+	if target.DamageTaken != wantDamage {
+		t.Fatalf("target damage taken = %d, want %d", target.DamageTaken, wantDamage)
 	}
 }
 

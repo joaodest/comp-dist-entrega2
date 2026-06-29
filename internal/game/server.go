@@ -14,14 +14,15 @@ import (
 )
 
 const (
-	arenaHalfSize        = float32(120)
-	maxMovePerTick       = float32(2.5)
-	chestOpenRange       = float32(2.25)
-	initialSafeZoneRange = float32(108)
-	finalSafeZoneRange   = float32(10)
-	maxMatchTicks        = int64(5 * 60 * tickHz)
-	safeZoneDamage       = int32(8)
-	maxHealth            = int32(100)
+	arenaHalfSize         = float32(120)
+	maxMovePerTick        = float32(2.5)
+	chestOpenRange        = float32(2.25)
+	initialSafeZoneRange  = float32(108)
+	finalSafeZoneRange    = float32(10)
+	maxMatchTicks         = int64(5 * 60 * tickHz)
+	safeZoneDamage        = int32(8)
+	maxHealth             = int32(100)
+	playerCollisionRadius = float32(1.05)
 
 	weaponPistol  = "pistol"
 	weaponRifle   = "rifle"
@@ -35,7 +36,7 @@ const (
 var weaponProfiles = map[string]weaponProfile{
 	weaponPistol:  {damage: 18, rangeUnits: 10, cooldownTicks: 1},
 	weaponRifle:   {damage: 24, rangeUnits: 16, cooldownTicks: 1},
-	weaponShotgun: {damage: 42, rangeUnits: 5, cooldownTicks: 2},
+	weaponShotgun: {damage: 42, rangeUnits: 8, cooldownTicks: 2},
 }
 
 var spawnPoints = []vec2{
@@ -141,6 +142,30 @@ type weaponProfile struct {
 type vec2 struct {
 	x float32
 	y float32
+}
+
+type circleObstacle struct {
+	pos    vec2
+	radius float32
+}
+
+var rockObstacles = []circleObstacle{
+	{pos: vec2{-18, 26}, radius: 2.2},
+	{pos: vec2{22, -14}, radius: 2.4},
+	{pos: vec2{2, -46}, radius: 2},
+	{pos: vec2{-50, -6}, radius: 1.8},
+	{pos: vec2{54, 22}, radius: 2.2},
+	{pos: vec2{14, 54}, radius: 1.8},
+	{pos: vec2{-60, 40}, radius: 2},
+	{pos: vec2{60, -50}, radius: 2.2},
+	{pos: vec2{-30, 70}, radius: 1.9},
+	{pos: vec2{70, 30}, radius: 2.1},
+	{pos: vec2{-96, 70}, radius: 2},
+	{pos: vec2{94, -72}, radius: 2.1},
+	{pos: vec2{78, 92}, radius: 1.9},
+	{pos: vec2{-82, -94}, radius: 2.1},
+	{pos: vec2{104, 46}, radius: 1.8},
+	{pos: vec2{-106, -42}, radius: 1.9},
 }
 
 func NewServer() *Server {
@@ -267,8 +292,11 @@ func (m *matchState) ensurePlayer(playerID string) *playerState {
 
 func (m *matchState) movePlayer(player *playerState, dx, dy float32) {
 	move := clampVector(vec2{dx, dy}, maxMovePerTick)
-	player.pos.x = clamp(player.pos.x+move.x, -arenaHalfSize, arenaHalfSize)
-	player.pos.y = clamp(player.pos.y+move.y, -arenaHalfSize, arenaHalfSize)
+	target := vec2{
+		x: clamp(player.pos.x+move.x, -arenaHalfSize, arenaHalfSize),
+		y: clamp(player.pos.y+move.y, -arenaHalfSize, arenaHalfSize),
+	}
+	player.pos = moveWithRockCollision(player.pos, target, playerCollisionRadius)
 }
 
 func (m *matchState) openNearestChest(player *playerState) {
@@ -321,7 +349,11 @@ func (m *matchState) attack(attacker *playerState, input *matchv1.PlayerInput) {
 func (m *matchState) findAttackTarget(attacker *playerState, input *matchv1.PlayerInput, rangeUnits float32) *playerState {
 	if targetID := strings.TrimSpace(input.TargetPlayerId); targetID != "" {
 		target := m.players[targetID]
-		if target != nil && target.alive && target.id != attacker.id && distance(attacker.pos, target.pos) <= rangeUnits {
+		if target != nil &&
+			target.alive &&
+			target.id != attacker.id &&
+			distance(attacker.pos, target.pos) <= rangeUnits &&
+			!rockBlocksLine(attacker.pos, target.pos, 0) {
 			return target
 		}
 		return nil
@@ -341,6 +373,9 @@ func (m *matchState) findAttackTarget(attacker *playerState, input *matchv1.Play
 			continue
 		}
 		if aim != (vec2{}) && dot(aim, normalized(offset)) < 0.5 {
+			continue
+		}
+		if rockBlocksLine(attacker.pos, candidate.pos, 0) {
 			continue
 		}
 		nearest = candidate
@@ -576,6 +611,125 @@ func length(v vec2) float32 {
 
 func dot(a, b vec2) float32 {
 	return a.x*b.x + a.y*b.y
+}
+
+func moveWithRockCollision(from, to vec2, actorRadius float32) vec2 {
+	if rockPathClear(from, to, actorRadius) {
+		return to
+	}
+
+	xThenY := slideWithRocks(from, to, actorRadius, true)
+	yThenX := slideWithRocks(from, to, actorRadius, false)
+	if distanceSquared(from, yThenX) > distanceSquared(from, xThenY) {
+		return yThenX
+	}
+	if distanceSquared(from, xThenY) > 0 {
+		return xThenY
+	}
+
+	t, ok := firstRockHitT(from, to, actorRadius)
+	if !ok {
+		return from
+	}
+	safeT := t - 0.02
+	if safeT < 0 {
+		safeT = 0
+	}
+	return vec2{
+		x: from.x + (to.x-from.x)*safeT,
+		y: from.y + (to.y-from.y)*safeT,
+	}
+}
+
+func slideWithRocks(from, to vec2, actorRadius float32, xFirst bool) vec2 {
+	pos := from
+	first := vec2{x: from.x, y: to.y}
+	if xFirst {
+		first = vec2{x: to.x, y: from.y}
+	}
+	if rockPathClear(pos, first, actorRadius) {
+		pos = first
+	}
+
+	second := vec2{x: to.x, y: pos.y}
+	if xFirst {
+		second = vec2{x: pos.x, y: to.y}
+	}
+	if rockPathClear(pos, second, actorRadius) {
+		pos = second
+	}
+	return pos
+}
+
+func rockPathClear(from, to vec2, actorRadius float32) bool {
+	return !hasRockCollision(to, actorRadius) && !rockBlocksLine(from, to, actorRadius)
+}
+
+func hasRockCollision(pos vec2, actorRadius float32) bool {
+	for _, rock := range rockObstacles {
+		r := rock.radius + actorRadius
+		if distanceSquared(pos, rock.pos) < r*r {
+			return true
+		}
+	}
+	return false
+}
+
+func rockBlocksLine(from, to vec2, padding float32) bool {
+	_, ok := firstRockHitT(from, to, padding)
+	return ok
+}
+
+func firstRockHitT(from, to vec2, padding float32) (float32, bool) {
+	var best float32
+	found := false
+	for _, rock := range rockObstacles {
+		t, ok := segmentCircleHitT(from, to, rock.pos, rock.radius+padding)
+		if ok && (!found || t < best) {
+			best = t
+			found = true
+		}
+	}
+	return best, found
+}
+
+func segmentCircleHitT(from, to, center vec2, radius float32) (float32, bool) {
+	dx := to.x - from.x
+	dy := to.y - from.y
+	a := dx*dx + dy*dy
+	if a <= 0 {
+		return 0, false
+	}
+
+	fx := from.x - center.x
+	fy := from.y - center.y
+	c := fx*fx + fy*fy - radius*radius
+	if c <= 0 {
+		return 0, true
+	}
+
+	b := 2 * (fx*dx + fy*dy)
+	disc := b*b - 4*a*c
+	if disc < 0 {
+		return 0, false
+	}
+
+	root := float32(math.Sqrt(float64(disc)))
+	t1 := (-b - root) / (2 * a)
+	if t1 >= 0 && t1 <= 1 {
+		return t1, true
+	}
+	t2 := (-b + root) / (2 * a)
+	if t2 >= 0 && t2 <= 1 {
+		return t2, true
+	}
+	return 0, false
+}
+
+func distanceSquared(a, b vec2) float32 {
+	dx := a.x - b.x
+	dy := a.y - b.y
+	return dx*dx + dy*dy
 }
 
 func clamp(value, minValue, maxValue float32) float32 {

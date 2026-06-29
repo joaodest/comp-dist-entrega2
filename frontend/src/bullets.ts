@@ -89,6 +89,7 @@ export class Bullets {
     weapon: string,
     headings: Map<string, Heading>,
     myId: string,
+    hitRock = false,
   ): void {
     const now = performance.now();
     const fx = fxFor(weapon);
@@ -104,6 +105,7 @@ export class Bullets {
     dy /= d;
     headings.set(myId, { x: dx, y: dy });
     this.fire(from.x, from.y, to.x, to.y, fx);
+    if (hitRock) this.spawnImpact(to.x, to.y, fx.color, false);
   }
 
   /**
