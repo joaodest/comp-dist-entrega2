@@ -148,6 +148,10 @@ O Compose agora sobe o sistema completo: frontend, Gateway, Lobby primario,
 Lobby backup, Game,
 Prometheus, Grafana e Jaeger.
 
+O Gateway promove automaticamente o Lobby backup quando o primario fica
+indisponivel, mantendo o fluxo de criacao/consulta de salas ativo apos o
+failover.
+
 ```bash
 docker compose -f deployments/docker-compose.yml config
 docker compose -f deployments/docker-compose.yml up --build

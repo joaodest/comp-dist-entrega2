@@ -16,6 +16,7 @@ provedor VPS real e a validacao remota foram separadas para a Fase 8 em
 - Lobby primario gRPC interno: `lobby-primary:50052`
 - Lobby backup gRPC interno: `lobby-backup:50052`
 - Replicacao interna do Lobby: `http://lobby-backup:8081/replication/lobby-state`
+- Promocao interna do Lobby backup: `http://lobby-backup:8081/replication/promote`
 
 ## Execução Local
 
@@ -74,7 +75,8 @@ go run ./tools/stress50 -gateway http://<ip-ou-dominio>:8080 -players 50 -durati
 
 - `/healthz` indica que o processo HTTP do serviço está vivo.
 - `/readyz` indica que o serviço está pronto para receber tráfego.
-- Gateway só fica ready quando consegue abrir TCP para Game e Lobby primario.
+- Gateway fica ready quando consegue abrir TCP para Game e para algum Lobby disponivel
+  (primario ativo ou backup pronto para failover).
 - Lobby primario e Lobby backup ficam ready quando seu gRPC esta ouvindo e o Game esta acessivel.
 - Game fica ready quando o listener gRPC foi aberto.
 
@@ -95,6 +97,21 @@ e consulte as metricas `voxel_lobby_replication_version` e
 `voxel_lobby_replication_events_total` no Prometheus. Se o `lobby-backup` estiver
 fora, escritas no `lobby-primary` retornam erro em vez de confirmar uma sala que
 nao foi replicada.
+
+Para demonstrar failover do Lobby, pare o primario e crie/consulte uma sala pelo
+Gateway:
+
+```bash
+docker compose -f deployments/docker-compose.yml stop lobby-primary
+curl -X POST http://localhost:8080/v1/rooms \
+  -H "Content-Type: application/json" \
+  -d '{"ownerName":"Failover","maxPlayers":4}'
+curl http://localhost:8080/readyz
+```
+
+O Gateway promove o `lobby-backup` por `POST /replication/promote`, repete a
+operacao no backup promovido e passa a encaminhar as proximas operacoes de sala
+para ele. A metrica `voxel_gateway_lobby_failovers_total` registra a troca.
 
 ## Estado e Stateless
 

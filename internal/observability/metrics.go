@@ -34,6 +34,10 @@ var (
 		Name: "voxel_gateway_realtime_errors_total",
 		Help: "Erros no pipeline WebSocket/gRPC do Gateway.",
 	}, []string{"operation"})
+	GatewayLobbyFailovers = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "voxel_gateway_lobby_failovers_total",
+		Help: "Tentativas de failover do Gateway para o Lobby backup por operacao e resultado.",
+	}, []string{"operation", "result"})
 
 	GamePushInputs = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "voxel_game_push_inputs_total",

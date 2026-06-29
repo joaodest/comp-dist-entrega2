@@ -3,9 +3,11 @@ package gateway
 import "os"
 
 type Config struct {
-	HTTPAddr      string
-	GameGRPCAddr  string
-	LobbyGRPCAddr string
+	HTTPAddr              string
+	GameGRPCAddr          string
+	LobbyGRPCAddr         string
+	LobbyBackupGRPCAddr   string
+	LobbyBackupPromoteURL string
 }
 
 func DefaultConfig() Config {
@@ -27,6 +29,12 @@ func ConfigFromEnv() Config {
 	}
 	if value := os.Getenv("LOBBY_GRPC_ADDR"); value != "" {
 		cfg.LobbyGRPCAddr = value
+	}
+	if value := os.Getenv("LOBBY_BACKUP_GRPC_ADDR"); value != "" {
+		cfg.LobbyBackupGRPCAddr = value
+	}
+	if value := os.Getenv("LOBBY_BACKUP_PROMOTE_URL"); value != "" {
+		cfg.LobbyBackupPromoteURL = value
 	}
 
 	return cfg

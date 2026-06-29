@@ -25,7 +25,7 @@ func main() {
 		defer func() { _ = shutdownTracing(context.Background()) }()
 	}
 
-	handler, err := gateway.NewProxyMux(ctx, cfg.GameGRPCAddr, cfg.LobbyGRPCAddr)
+	handler, err := gateway.NewProxyMux(ctx, cfg)
 	if err != nil {
 		log.Fatalf("gateway setup failed: %v", err)
 	}
@@ -40,7 +40,13 @@ func main() {
 		_ = server.Shutdown(context.Background())
 	}()
 
-	log.Printf("gateway http listening on %s, proxying game at %s and lobby at %s", cfg.HTTPAddr, cfg.GameGRPCAddr, cfg.LobbyGRPCAddr)
+	log.Printf(
+		"gateway http listening on %s, proxying game at %s and lobby primary at %s (backup %s)",
+		cfg.HTTPAddr,
+		cfg.GameGRPCAddr,
+		cfg.LobbyGRPCAddr,
+		cfg.LobbyBackupGRPCAddr,
+	)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("gateway http server failed: %v", err)
 	}

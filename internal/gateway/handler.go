@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	lobbyv1 "voxel-royale/gen/lobby"
 	matchv1 "voxel-royale/gen/match"
 	"voxel-royale/internal/observability"
 
@@ -40,37 +39,45 @@ func NewHealthMux(readinessChecks ...ReadinessCheck) *http.ServeMux {
 	return mux
 }
 
-// NewProxyMux monta o roteador HTTP do Gateway: web services REST (grpc-gateway
-// para Lobby e Game), o healthcheck e o endpoint WebSocket de tempo real
-// (/v1/match/ws), que liga a sessao do navegador as RPCs gRPC PushInput e
+// NewProxyMux monta o roteador HTTP do Gateway: grpc-gateway para Game, proxy
+// HTTP com failover para o Lobby, healthcheck e o endpoint WebSocket de tempo
+// real (/v1/match/ws), que liga a sessao do navegador as RPCs gRPC PushInput e
 // WatchMatch do Game (Fase 4).
-func NewProxyMux(ctx context.Context, gameGRPCAddr, lobbyGRPCAddr string) (http.Handler, error) {
+func NewProxyMux(ctx context.Context, cfg Config) (http.Handler, error) {
 	proxy := runtime.NewServeMux()
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		observability.GRPCClientOption(),
 	}
 
-	if err := matchv1.RegisterGameServiceHandlerFromEndpoint(ctx, proxy, gameGRPCAddr, opts); err != nil {
+	if err := matchv1.RegisterGameServiceHandlerFromEndpoint(ctx, proxy, cfg.GameGRPCAddr, opts); err != nil {
 		return nil, err
 	}
-	if err := lobbyv1.RegisterLobbyServiceHandlerFromEndpoint(ctx, proxy, lobbyGRPCAddr, opts); err != nil {
+	lobbyProxy, err := newLobbyFailoverProxy(
+		cfg.LobbyGRPCAddr,
+		cfg.LobbyBackupGRPCAddr,
+		cfg.LobbyBackupPromoteURL,
+		opts,
+	)
+	if err != nil {
 		return nil, err
 	}
 
 	// Conexao gRPC dedicada ao Game para o pipeline de tempo real (WebSocket).
 	// E separada do proxy REST para manter o transporte realtime desacoplado.
-	gameConn, err := grpc.NewClient(gameGRPCAddr, opts...)
+	gameConn, err := grpc.NewClient(cfg.GameGRPCAddr, opts...)
 	if err != nil {
 		return nil, err
 	}
 	rt := &realtimeBridge{game: matchv1.NewGameServiceClient(gameConn)}
 
 	mux := NewHealthMux(
-		tcpReadinessCheck("game", gameGRPCAddr),
-		tcpReadinessCheck("lobby", lobbyGRPCAddr),
+		tcpReadinessCheck("game", cfg.GameGRPCAddr),
+		lobbyProxy.readinessCheck,
 	)
 	mux.HandleFunc("/v1/match/ws", rt.handleMatchWS)
+	mux.HandleFunc("/v1/rooms", lobbyProxy.handleHTTP)
+	mux.HandleFunc("/v1/rooms/", lobbyProxy.handleHTTP)
 	mux.Handle("/", proxy)
 	return mux, nil
 }

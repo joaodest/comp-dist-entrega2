@@ -70,7 +70,7 @@ using ordered state snapshots.
 | Gateway | Public HTTP edge | `GET /healthz`, WebSocket `GET /v1/match/ws`, `POST /v1/match/stream`, `POST /v1/rooms`, `POST /v1/rooms/{id}/join`, `GET /v1/rooms/{id}`, `POST /v1/rooms/{id}/start`, `POST /v1/rooms/{id}/leave` |
 | Game | Authoritative gameplay backend | gRPC `GameService.StreamMatch`, `StartMatch`, `PushInput`, `WatchMatch` (server-clock snapshot stream), health `GET /healthz` on `:8082` |
 | Lobby primary | Room lifecycle manager | gRPC `LobbyService.CreateRoom`, `JoinRoom`, `GetRoom`, `StartRoom`, `LeaveRoom`, `SetReady`, health `GET /healthz` on `:8081` |
-| Lobby backup | Room state replica | Internal HTTP `POST /replication/lobby-state`, health `GET /healthz` on `:8081`; public Lobby writes are read-only on this role |
+| Lobby backup | Room state replica and failover target | Internal HTTP `POST /replication/lobby-state`, `POST /replication/promote`, health `GET /healthz` on `:8081`; public Lobby writes are read-only until promotion |
 
 ## Realtime Pipeline (Phase 4)
 
@@ -86,7 +86,6 @@ using ordered state snapshots.
 
 ## Remaining Gaps
 
-- Add automatic Gateway failover from Lobby primary to Lobby backup.
 - Add structured logging with request_id, room_id, player_id across services.
 - Persist or replicate Game match state if fault tolerance during active matches is required.
 

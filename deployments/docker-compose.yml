@@ -7,6 +7,8 @@ services:
       HTTP_ADDR: :8080
       GAME_GRPC_ADDR: game:50051
       LOBBY_GRPC_ADDR: lobby-primary:50052
+      LOBBY_BACKUP_GRPC_ADDR: lobby-backup:50052
+      LOBBY_BACKUP_PROMOTE_URL: http://lobby-backup:8081/replication/promote
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME: voxel-gateway
     ports:
@@ -15,6 +17,8 @@ services:
       game:
         condition: service_healthy
       lobby-primary:
+        condition: service_healthy
+      lobby-backup:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/readyz"]

@@ -49,12 +49,35 @@ fica disponivel apenas dentro da rede Docker:
 http://lobby-backup:8081/replication/lobby-state
 ```
 
+O Gateway tambem conhece o backup e sua rota interna de promocao:
+
+```text
+LOBBY_BACKUP_GRPC_ADDR=lobby-backup:50052
+LOBBY_BACKUP_PROMOTE_URL=http://lobby-backup:8081/replication/promote
+```
+
+## Failover
+
+Quando uma chamada do Gateway para o Lobby primario falha com erro de
+disponibilidade (`Unavailable` ou `DeadlineExceeded`), o Gateway:
+
+1. Chama `POST /replication/promote` no `lobby-backup`.
+2. O backup muda de papel e passa a aceitar escritas publicas do `LobbyService`.
+3. O Gateway troca seu endpoint ativo para `lobby-backup:50052`.
+4. A operacao que falhou e repetida uma vez no backup promovido.
+5. As proximas operacoes de sala seguem diretamente para o backup promovido.
+
+Essa troca e intencionalmente aderente: depois que o Gateway promove o backup,
+ele nao volta automaticamente para o primario antigo. Isso reduz o risco de
+split-brain se o primario antigo voltar com estado desatualizado.
+
 ## Metricas
 
 Foram adicionadas metricas Prometheus:
 
 - `voxel_lobby_replication_events_total{operation,result}`
 - `voxel_lobby_replication_version`
+- `voxel_gateway_lobby_failovers_total{operation,result}`
 
 O Prometheus coleta tanto `lobby-primary:8081` quanto `lobby-backup:8081`.
 
@@ -64,7 +87,6 @@ A replicacao foi aplicada ao Lobby porque ele guarda o estado de coordenacao das
 salas. O processamento em tempo real da partida continua no Game e nao passa a
 ser replicado por esta mudanca.
 
-O backup e read-only para chamadas publicas do Lobby. Ele aplica apenas eventos
-vindos do canal interno de replicacao. Portanto, esta implementacao demonstra
-controle de replicas e consistencia entre primario e backup, mas ainda nao faz
-failover automatico transparente do Gateway para o backup.
+Antes da promocao, o backup e read-only para chamadas publicas do Lobby. Ele
+aplica apenas eventos vindos do canal interno de replicacao. Depois da promocao,
+ele passa a operar como novo primario sem uma segunda replica a jusante.

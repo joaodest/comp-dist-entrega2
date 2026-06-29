@@ -80,6 +80,14 @@ func (s *Server) ReplicationVersion() uint64 {
 	return s.replicationVersion
 }
 
+func (s *Server) PromoteToPrimary() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.replicationRole = ReplicationPrimary
+	s.replicator = nil
+	observability.LobbyReplicationEvents.WithLabelValues("promote", "ok").Inc()
+}
+
 // rosterOf captura os jogadores da sala para envio ao Game.
 func rosterOf(r *room) []RosterPlayer {
 	roster := make([]RosterPlayer, 0, len(r.players))

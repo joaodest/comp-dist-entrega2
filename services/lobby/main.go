@@ -119,6 +119,7 @@ func healthServer(addr string, ready *atomic.Bool, gameAddr string, lobbyServer 
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.HandleFunc("/replication/lobby-state", lobbyServer.HandleReplicationHTTP)
+	mux.HandleFunc("/replication/promote", lobbyServer.HandlePromoteHTTP)
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if !ready.Load() {
 			http.Error(w, "not ready", http.StatusServiceUnavailable)
