@@ -1,51 +1,65 @@
 # Voxel Royale
 
-Monorepo do backend distribuido do Voxel Royale. A estrutura atual separa os tres servicos planejados para a Entrega 1:
+Monorepo do Voxel Royale, um jogo distribuido com cliente web, Gateway HTTP/WebSocket,
+servicos gRPC e observabilidade. A execucao completa usa Docker Compose e sobe
+frontend, Gateway, Game, Lobby primario, Lobby backup, Prometheus, Grafana e Jaeger.
 
-- `services/gateway`: entrada HTTP publica e traducao HTTP -> gRPC para Game e Lobby.
-- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano, safe zone e ranking; mantem partidas por sala (`room_id`).
-- `services/lobby`: gestao de salas (criar/entrar/pronto/iniciar) que dispara a partida no Game via gRPC (`StartMatch`).
+- `frontend/`: cliente web em Phaser 3 + TypeScript + Vite.
+- `services/gateway`: entrada HTTP/WebSocket publica e traducao para gRPC.
+- `services/game`: servico gRPC autoritativo para movimento, baus, armas, dano,
+  safe zone, ranking e partidas por sala (`room_id`).
+- `services/lobby`: gestao de salas (criar/entrar/pronto/iniciar), integracao
+  com o Game via `StartMatch` e suporte a replicacao primario-backup.
+- `deployments/`: Docker Compose, Prometheus e Grafana.
 
 ## Estrutura
 
 ```text
 .
 ├── deployments/docker-compose.yml
+├── frontend/               # cliente Phaser/Vite
 ├── gen/                    # codigo Go gerado a partir dos contratos
 ├── internal/
 │   ├── gateway/
 │   ├── game/
-│   └── lobby/
+│   ├── lobby/
+│   └── observability/
 ├── proto/
 │   ├── lobby/v1/lobby.proto
 │   └── match/v1/match.proto
-└── services/
-    ├── gateway/
-    ├── game/
-    └── lobby/
+├── services/
+│   ├── gateway/
+│   ├── game/
+│   └── lobby/
+└── tools/stress50/         # runner de carga com jogadores simultaneos
 ```
 
-## Configuração do Ambiente
+## Configuracao do Ambiente
 
-### Pré-requisitos
+### Para executar o sistema completo
 
-#### Instalação do Docker e WSL2
-- Baixe e instale o Docker Desktop para Windows: [docker.com](https://www.docker.com/products/docker-desktop/)
-- Certifique-se de que o WSL2 está habilitado (Docker Desktop instala automaticamente, mas verifique com `wsl --list --verbose`)
+- Docker Desktop com Docker Compose v2.
+- No Windows, WSL2 habilitado para o Docker Desktop.
 
-#### Instalação do Go (Golang)
-- Baixe a versão 1.25.0 ou superior do Go: [golang.org](https://golang.org/dl/)
-- Instale e adicione ao PATH do sistema
-- Verifique com `go version`
+### Para desenvolvimento local
 
-#### Download do Compilador Protoc (Protocol Buffers)
-- Baixe o release mais recente do protoc para Windows: [github.com/protocolbuffers/protobuf/releases](https://github.com/protocolbuffers/protobuf/releases)
-- Descompacte o arquivo ZIP
-- Mova o executável `protoc.exe` da pasta `bin` para uma pasta no PATH do sistema (ex: `C:\Windows\System32` ou adicione uma pasta personalizada ao PATH)
+- Go `1.25.0` ou superior.
+- Node.js e npm para o cliente web.
 
-### Dependências de Terceiros (Protos)
+### Para regenerar os contratos protobuf
 
-Crie a pasta `third_party` e clone o repositório de APIs do Google:
+Estes passos so sao necessarios quando os arquivos `.proto` forem alterados. O
+codigo gerado em `gen/` ja esta versionado para executar o projeto normalmente.
+
+Instale o `protoc`:
+
+- Baixe o release mais recente do Protocol Buffers para Windows:
+  [github.com/protocolbuffers/protobuf/releases](https://github.com/protocolbuffers/protobuf/releases).
+- Descompacte o ZIP.
+- Coloque `protoc.exe` em uma pasta no `PATH`, como `C:\Windows\System32`, ou
+  adicione uma pasta propria ao `PATH`.
+
+Baixe as dependencias de protos do Google:
 
 ```bash
 mkdir third_party
@@ -53,9 +67,7 @@ cd third_party
 git clone --depth 1 https://github.com/googleapis/googleapis
 ```
 
-### Plugins do Go para Protobuf
-
-Instale os geradores de código via terminal:
+Instale os geradores Go:
 
 ```bash
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -63,50 +75,63 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 ```
 
+Regere os arquivos com:
+
+```bash
+make proto
+```
+
 ## Como Executar
 
-### Executando o Projeto com Docker
+### Execucao completa com Docker
 
-Valide a configuração e suba os containers:
+Este e o caminho recomendado para demonstrar o projeto completo, incluindo
+frontend, backend, replicacao do Lobby, failover e observabilidade.
 
 ```bash
 docker compose -f deployments/docker-compose.yml config
 docker compose -f deployments/docker-compose.yml up --build
 ```
 
-### Testando a API
+Atalhos equivalentes pelo Makefile:
 
-O Gateway recebe requisições HTTP na porta 8080 e converte para gRPC internamente.
-
-#### Health Check
 ```bash
-curl http://localhost:8080/healthz
+make compose-config
+make docker-up
 ```
 
-#### Enviar Movimento (Stream)
+Endpoints principais:
+
+- Frontend: `http://localhost:5173`
+- Gateway HTTP/WebSocket: `http://localhost:8080`
+- Health do Gateway: `curl http://localhost:8080/healthz`
+- Readiness do Gateway: `curl http://localhost:8080/readyz`
+- Health do frontend: `curl http://localhost:5173/frontend-healthz`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`
+- Jaeger: `http://localhost:16686/search`
+
+Para parar a stack:
+
 ```bash
-curl -X POST http://localhost:8080/v1/match/stream \
-  -H "Content-Type: application/json" \
-  -d "{\"playerId\":\"player-1\",\"moveX\":1,\"moveY\":2,\"inputSequence\":1,\"openChest\":false,\"isAttacking\":false}"
+docker compose -f deployments/docker-compose.yml down
 ```
 
-## Documentacao
+### Execucao local para desenvolvimento
 
-- [Architecture update](docs/architecture.md): arquitetura implementada em relacao ao plano original.
-- [Implementation delta](docs/implementation-delta.md): checklist do que foi feito, desvios e gaps restantes.
-- [Team development](docs/team-development.md): guia by-design da Fase 2 para ownership, contratos, testes e reviews.
-- [Observability and stress](docs/observability.md): Prometheus/Grafana/Jaeger e runner de 50 jogadores da Fase 6.
-- [Stress results](docs/stress-results.md): smoke local com 50 jogadores simultâneos.
-- [Deploy](docs/deploy.md): Docker Compose completo, readiness e roteiro VPS da Fase 7.
-- [Lobby replication](docs/lobby-replication.md): algoritmo primario-backup para replicacao versionada do estado de salas.
-- [VPS provider setup](docs/vps-provider.md): checklist da Fase 8 para escolher/configurar a VPS real.
-- [Contributing](CONTRIBUTING.md): checklist curto para contribuir e validar PRs.
+Este modo e util para depurar servicos diretamente com `go run`, mas sobe apenas
+um Lobby standalone. Ele nao ativa a topologia primario-backup nem o failover; use
+Docker Compose para validar o comportamento completo.
 
-## Frontend / Cliente (Phaser 2D)
+Em terminais separados, a partir da raiz do repositorio:
 
-Cliente web do jogo em [`frontend/`](frontend/) (Phaser 3 + TypeScript + Vite), estilo
-top-down ".io" (grama, rio, árvores, pedras, jogador controlável, zona segura e baús
-renderizados a partir do `GameState`).
+```bash
+go run ./services/game
+go run ./services/lobby
+go run ./services/gateway
+```
+
+Para rodar o cliente web em modo dev:
 
 ```bash
 cd frontend
@@ -114,59 +139,106 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-- **Lobby (Fase 3):** ao abrir, o cliente mostra a tela de sala — criar sala (com QR Code/URL),
-  entrar por nome (inclusive via `?room=<id>`), marcar pronto e iniciar a partida. Para o fluxo
-  completo de salas suba os três serviços: `go run ./services/game`, `go run ./services/lobby` e
-  `go run ./services/gateway`.
-- **AO VIVO:** durante a partida mantém WebSocket com o Gateway (`GET /v1/match/ws`, via proxy do Vite para `:8080`),
-  enviando inputs sequenciados e recebendo snapshots do relógio do servidor.
-- **OFFLINE (mock):** se o Gateway não responder, cai num simulador local e continua jogável.
-- Controles: WASD/setas ou joystick para mover; espaço/ATIRAR; E/BAÚ. Detalhes em
-  [`frontend/README.md`](frontend/README.md).
+O Vite encaminha chamadas `/v1`, `/healthz` e `/readyz` para o Gateway em
+`http://localhost:8080`.
 
-> `POST /v1/match/stream` permanece como demo/compatibilidade por `curl`; o jogo real usa
-> WebSocket + `PushInput`/`WatchMatch`.
+## Testando a API
 
-## Observabilidade e Carga (Fase 6)
+O Gateway recebe requisicoes HTTP na porta `8080` e conversa com os servicos
+internos por gRPC.
 
-Com a stack Docker ativa, Prometheus, Grafana e Jaeger tambem sobem para demonstrar
-o comportamento distribuido:
+Health check:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+Readiness:
+
+```bash
+curl http://localhost:8080/readyz
+```
+
+Criar sala:
+
+```bash
+curl -X POST http://localhost:8080/v1/rooms \
+  -H "Content-Type: application/json" \
+  -d "{\"ownerName\":\"Player 1\",\"maxPlayers\":4}"
+```
+
+Enviar movimento pela rota HTTP de compatibilidade:
+
+```bash
+curl -X POST http://localhost:8080/v1/match/stream \
+  -H "Content-Type: application/json" \
+  -d "{\"playerId\":\"player-1\",\"moveX\":1,\"moveY\":2,\"inputSequence\":1,\"openChest\":false,\"isAttacking\":false}"
+```
+
+O jogo em tempo real usa WebSocket em `GET /v1/match/ws`, com o Gateway
+traduzindo as mensagens para `PushInput` e `WatchMatch` no Game.
+
+## Frontend / Cliente
+
+O cliente web em [`frontend/`](frontend/) usa Phaser 3 + TypeScript + Vite e
+renderiza uma arena top-down ".io" com grama, rio, arvores, pedras, jogador
+controlavel, zona segura, baus e demais jogadores a partir do `GameState`
+autoritativo.
+
+- Ao abrir, o cliente mostra a tela de sala: criar sala com QR Code/URL, entrar
+  por nome ou via `?room=<id>`, marcar pronto e iniciar a partida.
+- Em modo ao vivo, mantem WebSocket com o Gateway (`GET /v1/match/ws`) e recebe
+  snapshots do relogio do servidor.
+- Se o Gateway nao responder, cai em um simulador local para continuar jogavel.
+- Controles: WASD/setas ou joystick para mover; espaco/ATIRAR para atacar; E/BAU
+  para abrir bau.
+
+## Observabilidade e Carga
+
+Com a stack Docker ativa, Prometheus, Grafana e Jaeger sobem junto com os
+servicos:
 
 ```bash
 docker compose -f deployments/docker-compose.yml up --build
 make stress50
 ```
 
-- Métricas Prometheus: `http://localhost:8080/metrics`, `:8081/metrics`, `:8082/metrics`.
+- Metricas Prometheus: `http://localhost:8080/metrics`, `:8081/metrics`,
+  `:8082/metrics`.
 - Dashboard Grafana: `http://localhost:3000/d/voxel-royale/voxel-royale`.
 - Traces Jaeger: `http://localhost:16686/search`.
 - Runner de carga: `go run ./tools/stress50 -players 50 -duration 30s`.
 
-## Tolerância a Falhas e Deploy Local (Fase 7)
+## Tolerancia a Falhas e Deploy Local
 
-O Compose agora sobe o sistema completo: frontend, Gateway, Lobby primario,
-Lobby backup, Game,
-Prometheus, Grafana e Jaeger.
+O Compose sobe o sistema completo: frontend, Gateway, Lobby primario, Lobby
+backup, Game, Prometheus, Grafana e Jaeger.
 
 O Gateway promove automaticamente o Lobby backup quando o primario fica
-indisponivel, mantendo o fluxo de criacao/consulta de salas ativo apos o
+indisponivel, mantendo o fluxo de criacao e consulta de salas ativo apos o
 failover.
 
+Validacoes uteis:
+
 ```bash
-docker compose -f deployments/docker-compose.yml config
-docker compose -f deployments/docker-compose.yml up --build
+curl http://localhost:5173/frontend-healthz
+curl http://localhost:8080/readyz
+curl http://localhost:8080/metrics
 ```
 
-- Frontend: `http://localhost:5173`.
-- Readiness: `curl http://localhost:8080/readyz`.
-- Frontend health: `curl http://localhost:5173/frontend-healthz`.
-- Guia de deploy e checks de falha: [`docs/deploy.md`](docs/deploy.md).
+Para testar failover do Lobby:
 
-## Provedor VPS (Fase 8)
+```bash
+docker compose -f deployments/docker-compose.yml stop lobby-primary
+curl -X POST http://localhost:8080/v1/rooms \
+  -H "Content-Type: application/json" \
+  -d "{\"ownerName\":\"Failover\",\"maxPlayers\":4}"
+curl http://localhost:8080/readyz
+```
 
-O deploy remoto real depende de uma VPS provisionada pelo grupo. Use
-[`docs/vps-provider.md`](docs/vps-provider.md) para registrar provedor, plano, IP,
-SSH, firewall, Docker/Compose e a validação pública antes da fase de relatório.
+O Gateway chama `POST /replication/promote` no `lobby-backup`, repete a operacao
+no backup promovido e passa a encaminhar as proximas operacoes de sala para ele.
+A metrica `voxel_gateway_lobby_failovers_total` registra a troca.
 
 ## Smoke Test
 
@@ -220,17 +292,14 @@ Trecho esperado do fluxo HTTP Gateway -> gRPC Game:
 }
 ```
 
-## Gaps Identificados e Tratados
+## Notas Tecnicas
 
-- O codigo ativo havia sido revertido de `master`; a implementacao reaproveitavel estava apenas em `origin/gameService`.
-- A pasta antiga `voxel-royale/` misturava modulo, gateway e servidor generico; agora a raiz e o monorepo.
-- `cmd/server` foi substituido por `services/game`.
-- O Gateway nao usa mais `localhost` em container; Compose injeta `GAME_GRPC_ADDR=game:50051`.
-- Lobby e um servico separado e containerizado, com salas completas e integracao Lobby->Game (Fase 3).
+- A raiz do repositorio e o monorepo Go `voxel-royale`.
+- O codigo gerado fica em `gen/`.
 - Cada servico tem Dockerfile proprio e healthcheck.
-- O Game agora mantem estado em memoria para movimentacao validada, abertura de baus, tres armas, dano, eliminacao, safe zone e ranking.
-
-## Desvios em Relacao ao Plano Original
-
-- O codigo gerado ficou em `gen/`, seguindo o que foi reaproveitado da branch revertida, em vez de `internal/contracts/`.
-- Alem de `StreamMatch`, o Game expoe `StartMatch` (gRPC interno) chamado pelo Lobby ao iniciar a sala (Fase 3).
+- Em container, o Gateway usa DNS interno do Compose (`game:50051`,
+  `lobby-primary:50052` e `lobby-backup:50052`) em vez de `localhost`.
+- O Lobby e separado e containerizado, com salas completas, integracao
+  Lobby->Game, replicacao primario-backup e promocao do backup.
+- O Game mantem estado em memoria para movimentacao validada, abertura de baus,
+  armas, dano, eliminacao, safe zone e ranking.
