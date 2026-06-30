@@ -10,3 +10,4 @@ docs/report/*.toc
 docs/report/*.bbl
 docs/report/*.blg
 docs/report/*.synctex.gz
+node_modules/
