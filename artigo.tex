@@ -1,0 +1,222 @@
+%% —-----------------------------------------------------------
+%% sbcreviews-pt.tex
+%% Template para SBC Reviews
+%% (https://journals-sol.sbc.org.br/index.php/reviews/)
+%%
+%% Esta versão do template para a SBC Reviews inclui algumas
+%% modificações sobre o template original da REIC
+%% (https://journals-sol.sbc.org.br/index.php/reic)
+%%
+%% Licença CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+%% Sociedade Brasileira de Computação.
+
+\documentclass[portuguese]{sbcreviews-2025}%
+\usepackage[misc,geometry]{ifsym}
+
+\usepackage{tabularx}
+\usepackage{aas_macros}
+\usepackage[bottom]{footmisc}
+\usepackage{graphicx}
+\usepackage{tabularray}
+\usepackage{afterpage}
+\usepackage{url}
+\usepackage{pifont}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+
+\lstset{
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible
+}
+\setcitestyle{square}
+
+\definecolor{engtitle}{rgb}{0.5,0.5,0.5}
+\definecolor{orcidlogo}{rgb}{0.37,0.48,0.13}
+\definecolor{unilogo}{rgb}{0.16, 0.26, 0.58}
+\definecolor{maillogo}{rgb}{0.58, 0.16, 0.26}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.0}
+\hypersetup{colorlinks,breaklinks,
+            linkcolor=darkblue,urlcolor=darkblue,
+            anchorcolor=darkblue,citecolor=darkblue}
+
+\jid{PUC-Minas}
+\jtitle{Trabalho Prático - Computação Distribuída, 2026}
+\issn{2966-3938}
+\doi{10.5753/rocs.2026.XXXXXX}
+\copyrightstatement{This work is licensed under a Creative Commons Attribution 4.0 International License}
+\jyear{2026}
+
+\category{Sistemas Distribuídos}
+\title[Voxel Royale Distribuído]{Backend Distribuído para um Jogo Multiplayer em Go e gRPC: Segunda Entrega do Voxel Royale}
+\engtitle{\textcolor{engtitle}{A Distributed Backend for a Multiplayer Game in Go and gRPC: Second Delivery of Voxel Royale}}
+
+%THE ORCID IS MANDATORY FOR EACH AUTHOR
+\author[Silva et al. 2026]{
+\affil{\textbf{Ana Cristina Martins Silva}~\orcidlink{0000-0000-0000-0000}~\textcolor{blue}{\faEnvelope}~~[{PUC Minas}~|\href{mailto: ana.silva.1353892@sga.pucminas.br}{~{\textit{ana.silva.1353892@sga.pucminas.br}}}~]}
+\affil{\textbf{André Luiz Rocha Cabral}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: alrcabral@sga.pucminas.br}{~{\textit{alrcabral@sga.pucminas.br}}}~]}
+\affil{\textbf{João Paulo Dias Estevão}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: joao.estevao@sga.pucminas.br}{~{\textit{joao.estevao@sga.pucminas.br}}}~]}
+\affil{\textbf{Letícia Azevedo Cota Barbosa}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: lacbarbosa@sga.pucminas.br}{~{\textit{lacbarbosa@sga.pucminas.br}}}~]}
+\affil{\textbf{Lívia Alves Ferreira}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: livia.alves@sga.pucminas.br}{~{\textit{livia.alves@sga.pucminas.br}}}~]}
+\affil{\textbf{Luiz Fernando Antunes da Silva Frassi}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: lfasfrassi@sga.pucminas.br}{~{\textit{lfasfrassi@sga.pucminas.br}}}~]}
+\affil{\textbf{Pedro Augusto Gomes Ferreira de Albuquerque}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: pagfalbuquerque@sga.pucminas.br}{~{\textit{pagfalbuquerque@sga.pucminas.br}}}~]}
+\affil{\textbf{Pedro Henrique Lopes Costa}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: pedro.costa.1362465@sga.pucminas.br}{~{\textit{pedro.costa.1362465@sga.pucminas.br}}}~]}
+\affil{\textbf{Victor Souza Lima}~\orcidlink{0000-0000-0000-0000}~[{PUC Minas}~|\href{mailto: victor.lima.1478515@sga.pucminas.br}{~{\textit{victor.lima.1478515@sga.pucminas.br}}}~]}
+}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\maketitle
+
+\begin{mail}
+Pontifícia Universidade Católica de Minas Gerais, Av. Dom José Gaspar, 500 - Coração Eucarístico, Belo Horizonte, Minas Gerais, 30535-901, Brasil.
+\end{mail}
+
+\begin{abstract-pt}
+Este trabalho relata a segunda entrega do Voxel Royale, um mini \textit{battle royale} voxel com cliente web e backend distribuído. A versão atual mantém Gateway, Lobby e Game como serviços Go independentes, comunicando-se internamente por gRPC e expondo HTTP/JSON e WebSocket pelo Gateway. Em relação à entrega anterior, foram adicionados cliente Phaser/Vite, partida em tempo real com relógio autoritativo no servidor, integração Lobby $\rightarrow$ Game por \texttt{StartMatch}, salas com jogadores prontos e início automático, observabilidade com Prometheus/Grafana/Jaeger, teste de carga com 50 jogadores e tolerância a falhas no Lobby por replicação primário-backup. O Lobby primário replica snapshots versionados para o backup e só confirma escritas após a réplica aceitar o estado; em falha do primário, o Gateway promove o backup e repete a operação. Testes unitários, smoke tests via HTTP/WebSocket e o runner \texttt{stress50} validaram os fluxos principais, rollback de falhas e 50 conexões simultâneas.
+\end{abstract-pt}
+
+\begin{abstract-en}
+This paper reports the second delivery of Voxel Royale, a voxel mini battle royale with a web client and a distributed backend. The current version keeps Gateway, Lobby and Game as independent Go services, using gRPC internally and exposing HTTP/JSON and WebSocket through the Gateway. Compared with the previous delivery, the project now includes a Phaser/Vite client, real-time gameplay driven by an authoritative server clock, Lobby-to-Game integration through \texttt{StartMatch}, ready-state rooms with automatic start, Prometheus/Grafana/Jaeger observability, a 50-player load runner and primary-backup fault tolerance for the Lobby. The primary Lobby replicates versioned snapshots to the backup and only confirms writes after the replica accepts the state; when the primary fails, the Gateway promotes the backup and retries the operation. Unit tests, HTTP/WebSocket smoke tests and the \texttt{stress50} runner validated the main flows, failure rollbacks and 50 simultaneous connections.
+\end{abstract-en}
+
+\begin{pchaves}
+Computação distribuída, tolerância a falhas, replicação primário-backup, microsserviços, gRPC, WebSocket, jogos multiplayer.
+\end{pchaves}
+
+\begin{keywords}
+Distributed computing, fault tolerance, primary-backup replication, microservices, gRPC, WebSocket, multiplayer games.
+\end{keywords}
+
+\end{frontmatter}
+
+\section{Introdução}
+\label{sec:intro}
+
+Jogos multiplayer em tempo real precisam combinar baixa latência, consistência do estado compartilhado e resiliência a falhas parciais. No \textit{Voxel Royale Distribuído}, esses problemas aparecem em um cenário controlado: até 50 jogadores entram em uma sala, iniciam uma partida curta e recebem snapshots autoritativos de uma arena com movimento, baús, armas, dano, zona segura e ranking.
+
+A entrega anterior demonstrava a divisão inicial em microsserviços, gRPC~\cite{grpc}, \textit{Protocol Buffers}~\cite{protobuf}, Web Services HTTP via \texttt{grpc-gateway}~\cite{grpcgateway} e empacotamento com Docker Compose~\cite{dockercompose}. A segunda entrega preserva essas seções e amplia a implementação para cobrir requisitos de tempo real, teste de carga, observabilidade e tolerância a falhas. O sistema completo agora sobe com frontend, Gateway, Game, Lobby primário, Lobby backup, Prometheus, Grafana e Jaeger.
+
+O foco deste texto é registrar as novas implementações que ainda não estavam no artigo: a replicação primário-backup do Lobby, o failover feito pelo Gateway, o tratamento de falhas nas transições Lobby $\rightarrow$ Game, o pipeline WebSocket $\rightarrow$ gRPC em tempo real, os testes executados e as melhorias futuras.
+
+\section{Arquitetura do Sistema}
+
+O backend permanece organizado em três serviços principais, todos escritos em Go e executados em containers separados:
+
+\begin{itemize}
+\item \textbf{Gateway} (\texttt{:8080}): única borda pública. Expõe HTTP/JSON, \texttt{/healthz}, \texttt{/readyz}, \texttt{/metrics} e o WebSocket \texttt{/v1/match/ws}. Encaminha chamadas para Game e Lobby por gRPC.
+\item \textbf{Lobby} (\texttt{:50052} gRPC, \texttt{:8081} HTTP interno): gerencia salas, jogadores, dono da sala, marcação de pronto, início manual ou automático e replicação do estado de salas.
+\item \textbf{Game} (\texttt{:50051} gRPC, \texttt{:8082} HTTP interno): mantém partidas por \texttt{room\_id}, executa o relógio autoritativo de 15 Hz e publica snapshots de \texttt{GameState}.
+\end{itemize}
+
+A topologia da entrega atual adiciona um \texttt{lobby-primary} e um \texttt{lobby-backup}. O Gateway conversa primeiro com \texttt{lobby-primary:50052}; o primário replica para \texttt{http://lobby-backup:8081/replication/lobby-state}. Se o primário fica indisponível, o Gateway chama \texttt{POST /replication/promote} no backup, troca o endpoint ativo para \texttt{lobby-backup:50052} e repete uma vez a operação que falhou.
+
+\subsection{Gateway Service}
+
+O Gateway mantém o caminho HTTP $\rightarrow$ gRPC da primeira entrega, mas o fluxo do Lobby deixou de ser apenas o \texttt{grpc-gateway} gerado. Para suportar failover, \texttt{internal/gateway/lobby\_failover.go} implementa um proxy HTTP que decodifica as rotas de sala, chama o cliente gRPC do Lobby ativo e converte erros gRPC em status HTTP. O failover só é disparado para falhas de disponibilidade, especificamente \texttt{Unavailable}, \texttt{DeadlineExceeded} ou timeout de contexto.
+
+O tempo real usa um handler WebSocket dedicado. O navegador abre \texttt{GET /v1/match/ws?room=\{id\}\&player=\{id\}}; o Gateway reescreve \texttt{room\_id} e \texttt{player\_id} a partir da conexão, ignora esses campos vindos do payload do cliente e encaminha cada input por \texttt{Game.PushInput}. Em paralelo, assina \texttt{Game.WatchMatch} e envia os snapshots recebidos de volta ao WebSocket em JSON. Pings periódicos e \textit{deadlines} de leitura/escrita detectam conexões quebradas sem travar o processo.
+
+\subsection{Lobby Service e Replicação}
+
+O Lobby continua mantendo o ciclo de vida das salas em memória: \texttt{CreateRoom}, \texttt{JoinRoom}, \texttt{GetRoom}, \texttt{StartRoom}, \texttt{LeaveRoom} e \texttt{SetReady}. A novidade funcional é que \texttt{SetReady} marca cada jogador como pronto e inicia automaticamente a sala quando todos estão prontos. Tanto o início manual quanto o automático chamam \texttt{Game.StartMatch}, passando o \textit{roster} da sala para pré-posicionar os jogadores no Game.
+
+A replicação implementada é primário-backup. O papel de cada instância vem de \texttt{LOBBY\_REPLICATION\_ROLE}; o primário recebe escritas públicas e o backup é somente leitura até ser promovido. A cada escrita bem-sucedida (\texttt{CreateRoom}, \texttt{JoinRoom}, \texttt{LeaveRoom}, \texttt{SetReady} ou \texttt{StartRoom}), o primário incrementa uma versão monotônica, gera um snapshot completo com salas, jogadores, dono, status, flags de pronto e contadores de ID, e envia esse evento ao backup por HTTP interno.
+
+O backup aceita apenas \texttt{version == lastVersion + 1}. Eventos duplicados com a mesma versão são idempotentes somente quando o snapshot é igual ao estado já aplicado; eventos fora de ordem ou com lacuna são rejeitados com erro. O primário só responde sucesso ao cliente depois da confirmação do backup. Se a replicação falhar, \texttt{commitReplicationLocked} restaura o snapshot e a versão anteriores, retornando \texttt{Unavailable}. Assim, uma sala confirmada pelo Lobby também está presente no backup.
+
+\subsection{Game Service e Cliente}
+
+O Game agora mantém um mapa de partidas por \texttt{room\_id}, além de uma partida global de compatibilidade com a rota unária \texttt{/v1/match/stream}. \texttt{StartMatch} cria ou reinicia a partida de uma sala com os jogadores recebidos do Lobby; \texttt{PushInput} armazena o último input por jogador; \texttt{WatchMatch} envia um stream de snapshots. O relógio da partida começa quando o primeiro assinante entra e para quando o último sai, evitando CPU ociosa em partidas sem clientes.
+
+Cada tick aplica inputs ainda válidos, descarta sequências antigas, limita movimento, evita colisão com pedras, processa abertura de baús, ataque, dano de zona segura e ranking. O jogo dura até 4500 ticks, cerca de cinco minutos a 15 Hz, ou termina quando resta no máximo um jogador vivo. O cliente web em Phaser/Vite consome esse fluxo via WebSocket, renderiza lobby, sala, arena e tela de fim, e possui fallback local para demonstração quando o backend não responde.
+
+\subsection{Infraestrutura e Observabilidade}
+
+O Docker Compose atual sobe frontend, Gateway, Game, Lobby primário, Lobby backup, Prometheus, Grafana e Jaeger. \texttt{/readyz} diferencia processo vivo de serviço pronto: o Gateway só fica pronto quando consegue alcançar o Game e pelo menos um Lobby utilizável; os Lobbies verificam a dependência com o Game; o Game fica pronto após abrir o listener gRPC.
+
+As métricas Prometheus incluem sessões WebSocket, mensagens e bytes por direção, latência de \texttt{PushInput}, erros realtime, tentativas de failover, inputs aceitos/rejeitados, streams ativos, ticks, duração do tick, snapshots descartados, salas, jogadores e eventos de replicação. O Jaeger recebe traces OpenTelemetry das entradas HTTP e chamadas gRPC.
+
+\section{Implementação dos Requisitos}
+
+\subsection{Comunicação, Web Services e Tempo Real}
+
+Os contratos vivem em \texttt{proto/lobby/v1/lobby.proto} e \texttt{proto/match/v1/match.proto}; o código Go gerado fica em \texttt{gen/}. As rotas HTTP públicas do Lobby são \texttt{POST /v1/rooms}, \texttt{POST /v1/rooms/\{id\}/join}, \texttt{GET /v1/rooms/\{id\}}, \texttt{POST /v1/rooms/\{id\}/start}, \texttt{POST /v1/rooms/\{id\}/leave} e \texttt{POST /v1/rooms/\{id\}/ready}. O Game expõe \texttt{POST /v1/match/stream} para compatibilidade e usa internamente \texttt{StartMatch}, \texttt{PushInput} e \texttt{WatchMatch} para a partida em tempo real.
+
+Essa separação mantém HTTP/JSON como interface pública de operação e gRPC como transporte interno tipado. A partida em tempo real não depende de polling HTTP: o WebSocket do Gateway representa a sessão do jogador, enquanto o Game concentra a autoridade do estado e publica snapshots regulares.
+
+\subsection{Tratamento de Falhas Implementado}
+
+Foram implementados quatro mecanismos principais. Primeiro, os \textit{healthchecks} e \texttt{/readyz} impedem que o Compose e o Gateway considerem pronto um serviço que ainda não abriu suas dependências. Segundo, o Lobby reverte a transição de sala para \texttt{STARTED} quando \texttt{Game.StartMatch} falha, deixando a sala novamente em \texttt{WAITING}. Terceiro, a replicação primário-backup confirma escritas somente após a réplica aceitar o snapshot, com rollback local se o backup falhar. Quarto, o Gateway promove o backup quando o primário falha por indisponibilidade e mantém a decisão de forma aderente, sem voltar automaticamente ao primário antigo, reduzindo o risco de \textit{split-brain}.
+
+Também há tratamentos no plano de jogo: inputs sem \texttt{player\_id} ou com \texttt{NaN}/\texttt{Inf} são rejeitados; \texttt{input\_sequence} antigo é ignorado; cliente WebSocket lento tem snapshots descartados quando o buffer enche, evitando bloquear o relógio global; desconexões removem o input pendente e encerram o relógio quando não há assinantes.
+
+\subsection{Testes Realizados}
+
+A suíte \texttt{go test ./...} cobre os três serviços. No Lobby, os testes validam criação/entrada/saída de sala, capacidade, autorização do dono, transferência de posse, \texttt{SetReady}, início automático, chamada a \texttt{StartMatch}, rollback quando o Game falha, backup somente leitura, aplicação de evento de replicação, rejeição de evento fora de ordem e rollback quando a réplica não confirma. No Gateway, há teste de promoção do backup com primário indisponível, verificando que a sala é criada no backup promovido e que o endpoint ativo muda para ele. No Game, os testes cobrem snapshot autoritativo, pré-spawn do roster, isolamento por \texttt{room\_id}, reinício de partida, movimento limitado, colisão com pedras, baús, dano, eliminação, ranking, zona segura, relógio realtime, descarte de input antigo, parada do relógio sem assinantes e limpeza de conexão.
+
+Além dos unitários, foram executados smoke tests por HTTP para \texttt{/healthz}, \texttt{/readyz}, criação/entrada/início de sala e \texttt{/v1/match/stream}. O runner \texttt{tools/stress50} cria uma sala, adiciona bots, inicia a partida e abre 50 WebSockets. O smoke local registrado em \texttt{docs/stress-results.md} executou 50 jogadores por 5 segundos, com 3750 inputs enviados, 3750 snapshots recebidos, média de 75 snapshots por jogador, aproximadamente 15 Hz e zero erros do simulador.
+
+\section{Desafios Encontrados}
+
+\subsection{Integração Entre Sala e Partida}
+
+Na primeira entrega, \texttt{StartRoom} apenas mudava o status da sala. A integração real exigiu uma interface \texttt{MatchStarter}, um cliente gRPC no processo Lobby e rollback quando o Game não confirma. A chamada foi colocada fora do mutex principal do Lobby para não segurar o lock durante rede, mas a transição de status e sua replicação continuam protegidas por snapshot.
+
+\subsection{Replicação sem Persistência Durável}
+
+Como o escopo não incluía banco de dados, a consistência possível foi concentrada em memória replicada. O desafio foi evitar divergência silenciosa: por isso o backup rejeita lacunas de versão, duplicatas diferentes e escritas públicas enquanto está no papel de backup. A decisão de exigir confirmação síncrona da réplica aumenta a latência de escrita, mas dá uma propriedade simples de demonstrar: se o cliente recebeu sucesso, o backup possui o mesmo estado.
+
+\subsection{Tempo Real e Clientes Lentos}
+
+O fluxo unário da primeira entrega era suficiente para \textit{curl}, mas não para uma partida fluida. A solução foi separar input e snapshot: \texttt{PushInput} atualiza um buffer e o relógio de servidor aplica o último input conhecido a cada tick. Para não deixar um cliente lento bloquear todos os outros, cada assinante possui buffer limitado; em caso de lotação, o snapshot novo é descartado e a métrica \texttt{voxel\_game\_snapshot\_drops\_total} registra a perda.
+
+\section{Participação dos Integrantes}
+
+O grupo manteve a divisão por fronteiras de serviço, com integração conjunta nos contratos \texttt{.proto}, Docker Compose e testes.
+
+\begin{table}[ht]
+\centering
+\caption{Divisão de responsabilidades por microsserviço.}
+\label{tab:equipes}
+\scriptsize
+\begin{tabularx}{\columnwidth}{|X|X|}
+\hline
+\textbf{Integrantes} & \textbf{Responsabilidade} \\ \hline
+Ana Cristina, Lívia e Luiz &
+Gateway, WebSocket, proxy HTTP, failover do Lobby, health/readiness e métricas da borda. \\ \hline
+Letícia, Pedro Augusto e Pedro Henrique &
+Lobby, ciclo de vida de sala, \texttt{SetReady}, integração com Game e replicação primário-backup. \\ \hline
+André, João e Victor &
+Game Service, relógio autoritativo, partidas por sala, regras de arena, cliente web e runner de carga. \\ \hline
+Todos os integrantes &
+Contratos, Docker Compose, smoke tests, observabilidade, documentação e revisão do relatório. \\ \hline
+\end{tabularx}
+\end{table}
+
+\section{Conclusão}
+
+A segunda entrega transforma o Voxel Royale de um backend distribuído inicial em uma demonstração completa de comunicação, tempo real, observabilidade e tolerância a falhas. O sistema executa cliente web, Gateway, Game, Lobby primário, Lobby backup e stack de métricas/traces em Docker Compose. O Lobby agora inicia partidas no Game, replica seu estado para um backup versionado e permite failover promovido pelo Gateway. O Game evoluiu para partidas por sala com relógio autoritativo e snapshots via stream gRPC, repassados ao navegador por WebSocket. Os testes unitários, smoke tests e o runner de 50 jogadores validam tanto a lógica funcional quanto os principais cenários de falha implementados.
+
+As principais limitações restantes são deliberadas: o estado do Game ainda não é replicado, não há persistência durável de salas, o failover é manualmente promovido pelo Gateway mas não possui eleição distribuída, e a segurança da borda ainda é simples para fins acadêmicos. Como melhorias futuras, o grupo propõe persistir ou replicar partidas ativas, adicionar logs estruturados com \texttt{request\_id}, \texttt{room\_id} e \texttt{player\_id}, endurecer WebSocket com autenticação leve e controle de origem, tratar reconexão de jogador com mais robustez, rodar testes de carga mais longos em VPS e avaliar uma estratégia de consenso ou lease para promoção automática sem risco de \textit{split-brain}.
+
+\begin{declarations}
+
+\begin{materials}
+O código-fonte, contratos \texttt{.proto}, Dockerfiles, \texttt{docker-compose.yml}, documentação de replicação (\texttt{docs/lobby-replication.md}), observabilidade (\texttt{docs/observability.md}) e resultados de carga (\texttt{docs/stress-results.md}) estão disponíveis no repositório GitHub: \url{https://github.com/joaodest/comp-dist.git}
+\end{materials}
+
+\end{declarations}
+
+\begin{thebibliography}{9}
+\bibitem{grpc} gRPC Authors. \textit{gRPC: A high performance, open source universal RPC framework}. \url{https://grpc.io}.
+\bibitem{grpcgateway} gRPC-Gateway Authors. \textit{grpc-gateway: gRPC to JSON proxy generator following google.api.http}. \url{https://github.com/grpc-ecosystem/grpc-gateway}.
+\bibitem{protobuf} Google. \textit{Protocol Buffers}. \url{https://protobuf.dev}.
+\bibitem{dockercompose} Docker Inc. \textit{Docker Compose}. \url{https://docs.docker.com/compose/}.
+\end{thebibliography}
+
+\end{document}
